@@ -12,6 +12,6 @@ type Subject struct {
 	UpdatedAt    time.Time   `json:"updated_at" gorm:"autoUpdateTime"`
 	DeletedAt    *time.Time  `json:"deleted_at,omitempty" gorm:"index"`
 	Department   *Department `json:"department,omitempty" gorm:"foreignKey:DepartmentID;references:ID"`
-	Papers       []*Paper    `json:"papers,omitempty" gorm:"foreignKey:SubjectID;references:ID"` // list of papers
+	Papers       []*Paper    `json:"papers,omitempty" gorm:"foreignKey:SubjectID;references:ID"` // A subject can have multiple papers
 	Classes      []*Class    `json:"classes,omitempty" gorm:"many2many:class_subjects;"`
 }

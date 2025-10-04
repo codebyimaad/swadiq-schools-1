@@ -1500,7 +1500,7 @@ func GetAllExams(db *sql.DB) ([]*models.Exam, error) {
 			Class: &models.Class{},
 		}
 		err := rows.Scan(
-			&exam.ID, &exam.Name, &exam.ClassID, &exam.StartDate, &exam.EndDate,
+			&exam.ID, &exam.Name, &exam.ClassID, &exam.StartTime, &exam.EndTime,
 			&exam.IsActive, &exam.CreatedAt, &exam.UpdatedAt,
 			&exam.Class.Name,
 		)
@@ -1532,7 +1532,7 @@ func GetExamsByClass(db *sql.DB, classID string) ([]*models.Exam, error) {
 			Class: &models.Class{},
 		}
 		err := rows.Scan(
-			&exam.ID, &exam.Name, &exam.ClassID, &exam.StartDate, &exam.EndDate,
+			&exam.ID, &exam.Name, &exam.ClassID, &exam.StartTime, &exam.EndTime,
 			&exam.IsActive, &exam.CreatedAt, &exam.UpdatedAt,
 			&exam.Class.Name,
 		)
@@ -1550,7 +1550,7 @@ func CreateExam(db *sql.DB, exam *models.Exam) error {
 			  VALUES ($1, $2, $3, $4, true, NOW(), NOW())
 			  RETURNING id, created_at, updated_at`
 
-	err := db.QueryRow(query, exam.Name, exam.ClassID, exam.StartDate, exam.EndDate).Scan(
+	err := db.QueryRow(query, exam.Name, exam.ClassID, exam.StartTime, exam.EndTime).Scan(
 		&exam.ID, &exam.CreatedAt, &exam.UpdatedAt,
 	)
 
@@ -1573,7 +1573,7 @@ func GetExamByID(db *sql.DB, examID string) (*models.Exam, error) {
 			  WHERE e.id = $1 AND e.is_active = true`
 
 	err := db.QueryRow(query, examID).Scan(
-		&exam.ID, &exam.Name, &exam.ClassID, &exam.StartDate, &exam.EndDate,
+		&exam.ID, &exam.Name, &exam.ClassID, &exam.StartTime, &exam.EndTime,
 		&exam.IsActive, &exam.CreatedAt, &exam.UpdatedAt,
 		&exam.Class.Name,
 	)
@@ -1695,4 +1695,250 @@ func GetSubjectsByDepartment(db *sql.DB, departmentID string) ([]*models.Subject
 	}
 
 	return subjects, nil
+}
+
+// Academic Year functions
+func GetAllAcademicYears(db *sql.DB) ([]*models.AcademicYear, error) {
+	query := `SELECT id, name, start_date, end_date, is_current, is_active, created_at, updated_at
+			  FROM academic_years 
+			  ORDER BY start_date DESC`
+
+	rows, err := db.Query(query)
+	if err != nil {
+		return []*models.AcademicYear{}, nil
+	}
+	defer rows.Close()
+
+	var academicYears []*models.AcademicYear
+	for rows.Next() {
+		academicYear := &models.AcademicYear{}
+		var startDate, endDate time.Time
+		err := rows.Scan(
+			&academicYear.ID, &academicYear.Name, &startDate, &endDate,
+			&academicYear.IsCurrent, &academicYear.IsActive, &academicYear.CreatedAt, &academicYear.UpdatedAt,
+		)
+		if err != nil {
+			continue
+		}
+		// Convert time.Time to CustomTime
+		academicYear.StartDate = models.CustomTime{Time: startDate}
+		academicYear.EndDate = models.CustomTime{Time: endDate}
+		
+		// Load associated terms
+		terms, err := GetTermsByAcademicYearID(db, academicYear.ID)
+		if err == nil {
+			academicYear.Terms = terms
+		}
+		
+		academicYears = append(academicYears, academicYear)
+	}
+
+	if academicYears == nil {
+		academicYears = []*models.AcademicYear{}
+	}
+
+	return academicYears, nil
+}
+
+func GetAcademicYearByID(db *sql.DB, academicYearID string) (*models.AcademicYear, error) {
+	academicYear := &models.AcademicYear{}
+	var startDate, endDate time.Time
+	query := `SELECT id, name, start_date, end_date, is_current, is_active, created_at, updated_at
+			  FROM academic_years WHERE id = $1`
+
+	err := db.QueryRow(query, academicYearID).Scan(
+		&academicYear.ID, &academicYear.Name, &startDate, &endDate,
+		&academicYear.IsCurrent, &academicYear.IsActive, &academicYear.CreatedAt, &academicYear.UpdatedAt,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert time.Time to CustomTime
+	academicYear.StartDate = models.CustomTime{Time: startDate}
+	academicYear.EndDate = models.CustomTime{Time: endDate}
+
+	// Load associated terms
+	terms, err := GetTermsByAcademicYearID(db, academicYearID)
+	if err == nil {
+		academicYear.Terms = terms
+	}
+
+	return academicYear, nil
+}
+
+func CreateAcademicYear(db *sql.DB, academicYear *models.AcademicYear) error {
+	query := `INSERT INTO academic_years (name, start_date, end_date, is_current, is_active, created_at, updated_at)
+			  VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+			  RETURNING id, created_at, updated_at`
+
+	err := db.QueryRow(query, academicYear.Name, academicYear.StartDate.Time, academicYear.EndDate.Time,
+		academicYear.IsCurrent, academicYear.IsActive).Scan(
+		&academicYear.ID, &academicYear.CreatedAt, &academicYear.UpdatedAt,
+	)
+
+	return err
+}
+
+func UpdateAcademicYear(db *sql.DB, academicYear *models.AcademicYear) error {
+	query := `UPDATE academic_years SET name = $1, start_date = $2, end_date = $3, 
+			  is_current = $4, is_active = $5, updated_at = NOW() WHERE id = $6`
+	_, err := db.Exec(query, academicYear.Name, academicYear.StartDate.Time, academicYear.EndDate.Time,
+		academicYear.IsCurrent, academicYear.IsActive, academicYear.ID)
+	return err
+}
+
+func DeleteAcademicYear(db *sql.DB, academicYearID string) error {
+	query := `DELETE FROM academic_years WHERE id = $1`
+	_, err := db.Exec(query, academicYearID)
+	return err
+}
+
+// Term functions
+func GetTermsByAcademicYearID(db *sql.DB, academicYearID string) ([]*models.Term, error) {
+	query := `SELECT id, academic_year_id, name, start_date, end_date, 
+			  is_current, is_active, created_at, updated_at
+			  FROM terms 
+			  WHERE academic_year_id = $1
+			  ORDER BY start_date`
+
+	rows, err := db.Query(query, academicYearID)
+	if err != nil {
+		return []*models.Term{}, nil
+	}
+	defer rows.Close()
+
+	var terms []*models.Term
+	for rows.Next() {
+		term := &models.Term{}
+		var startDate, endDate time.Time
+		err := rows.Scan(
+			&term.ID, &term.AcademicYearID, &term.Name, &startDate, &endDate,
+			&term.IsCurrent, &term.IsActive, &term.CreatedAt, &term.UpdatedAt,
+		)
+		if err != nil {
+			continue
+		}
+		// Convert time.Time to CustomTime
+		term.StartDate = models.CustomTime{Time: startDate}
+		term.EndDate = models.CustomTime{Time: endDate}
+		terms = append(terms, term)
+	}
+
+	if terms == nil {
+		terms = []*models.Term{}
+	}
+
+	return terms, nil
+}
+
+func CreateTerm(db *sql.DB, term *models.Term) error {
+	query := `INSERT INTO terms (academic_year_id, name, start_date, end_date, is_current, is_active, created_at, updated_at)
+			  VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+			  RETURNING id, created_at, updated_at`
+
+	err := db.QueryRow(query, term.AcademicYearID, term.Name, term.StartDate.Time, term.EndDate.Time,
+		term.IsCurrent, term.IsActive).Scan(
+		&term.ID, &term.CreatedAt, &term.UpdatedAt,
+	)
+
+	return err
+}
+
+func UpdateTerm(db *sql.DB, term *models.Term) error {
+	query := `UPDATE terms SET academic_year_id = $1, name = $2, start_date = $3, end_date = $4,
+			  is_current = $5, is_active = $6, updated_at = NOW() WHERE id = $7`
+	_, err := db.Exec(query, term.AcademicYearID, term.Name, term.StartDate.Time, term.EndDate.Time,
+		term.IsCurrent, term.IsActive, term.ID)
+	return err
+}
+
+func DeleteTerm(db *sql.DB, termID string) error {
+	query := `DELETE FROM terms WHERE id = $1`
+	_, err := db.Exec(query, termID)
+	return err
+}
+
+// Get all terms
+func GetAllTerms(db *sql.DB) ([]*models.Term, error) {
+	query := `SELECT t.id, t.academic_year_id, t.name, t.start_date, t.end_date, 
+			  t.is_current, t.is_active, t.created_at, t.updated_at,
+			  a.name as academic_year_name
+			  FROM terms t
+			  LEFT JOIN academic_years a ON t.academic_year_id = a.id
+			  ORDER BY t.start_date DESC`
+
+	rows, err := db.Query(query)
+	if err != nil {
+		return []*models.Term{}, nil
+	}
+	defer rows.Close()
+
+	var terms []*models.Term
+	for rows.Next() {
+		term := &models.Term{
+			AcademicYear: &models.AcademicYear{},
+		}
+		var academicYearName *string
+		var startDate, endDate time.Time
+		err := rows.Scan(
+			&term.ID, &term.AcademicYearID, &term.Name, &startDate, &endDate,
+			&term.IsCurrent, &term.IsActive, &term.CreatedAt, &term.UpdatedAt,
+			&academicYearName,
+		)
+		if err != nil {
+			continue
+		}
+
+		// Convert time.Time to CustomTime
+		term.StartDate = models.CustomTime{Time: startDate}
+		term.EndDate = models.CustomTime{Time: endDate}
+
+		if academicYearName != nil {
+			term.AcademicYear.Name = *academicYearName
+		}
+
+		terms = append(terms, term)
+	}
+
+	if terms == nil {
+		terms = []*models.Term{}
+	}
+
+	return terms, nil
+}
+
+func GetTermByID(db *sql.DB, termID string) (*models.Term, error) {
+	term := &models.Term{
+		AcademicYear: &models.AcademicYear{},
+	}
+	query := `SELECT t.id, t.academic_year_id, t.name, t.start_date, t.end_date, 
+			  t.is_current, t.is_active, t.created_at, t.updated_at,
+			  a.name as academic_year_name
+			  FROM terms t
+			  LEFT JOIN academic_years a ON t.academic_year_id = a.id
+			  WHERE t.id = $1`
+
+	var academicYearName *string
+	var startDate, endDate time.Time
+	err := db.QueryRow(query, termID).Scan(
+		&term.ID, &term.AcademicYearID, &term.Name, &startDate, &endDate,
+		&term.IsCurrent, &term.IsActive, &term.CreatedAt, &term.UpdatedAt,
+		&academicYearName,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert time.Time to CustomTime
+	term.StartDate = models.CustomTime{Time: startDate}
+	term.EndDate = models.CustomTime{Time: endDate}
+
+	if academicYearName != nil {
+		term.AcademicYear.Name = *academicYearName
+	}
+
+	return term, nil
 }

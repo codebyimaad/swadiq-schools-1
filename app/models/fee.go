@@ -11,6 +11,7 @@ type Fee struct {
 	TermID         *string       `json:"term_id,omitempty" gorm:"index;type:uuid" validate:"omitempty,uuid"`
 	Title          string        `json:"title" gorm:"not null" validate:"required"`
 	Amount         float64       `json:"amount" gorm:"not null;type:decimal(10,2)" validate:"required,gt=0"`
+	Balance        float64       `json:"balance" gorm:"type:decimal(10,2);default:0" validate:"gte=0"`
 	Currency       string        `json:"currency" gorm:"not null;default:'USD';type:varchar(3)" validate:"required,len=3"`
 	Paid           bool          `json:"paid" gorm:"default:false;index"`
 	DueDate        time.Time     `json:"due_date" gorm:"not null;index" validate:"required"`

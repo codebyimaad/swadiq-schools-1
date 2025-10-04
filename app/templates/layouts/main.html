@@ -219,6 +219,12 @@
                                 Attendance
                             </a>
 
+                            <a href="/settings/academic"
+                               class="flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 {{if eq .CurrentPage "academic"}}bg-primary-50 text-primary-700 border-r-2 border-primary-600{{else}}text-gray-700 hover:bg-gray-50 hover:text-gray-900{{end}}">
+                                <i class="fas fa-calendar w-5 mr-3 {{if eq .CurrentPage "academic"}}text-primary-600{{else}}text-gray-400{{end}}"></i>
+                                Academic Settings
+                            </a>
+
                             <a href="/exams"
                                class="flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 {{if eq .CurrentPage "exams"}}bg-primary-50 text-primary-700 border-r-2 border-primary-600{{else}}text-gray-700 hover:bg-gray-50 hover:text-gray-900{{end}}">
                                 <i class="fas fa-clipboard-list w-5 mr-3 {{if eq .CurrentPage "exams"}}text-primary-600{{else}}text-gray-400{{end}}"></i>

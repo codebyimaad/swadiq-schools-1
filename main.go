@@ -3,11 +3,13 @@ package main
 import (
 	"log"
 	"swadiq-schools/app/config"
+	"swadiq-schools/app/routes/academic"
 	"swadiq-schools/app/routes/attendance"
 	"swadiq-schools/app/routes/auth"
 	"swadiq-schools/app/routes/classes"
 	"swadiq-schools/app/routes/dashboard"
 	"swadiq-schools/app/routes/departments"
+	"swadiq-schools/app/routes/fees"
 	"swadiq-schools/app/routes/parents"
 	"swadiq-schools/app/routes/students"
 	"swadiq-schools/app/routes/subjects"
@@ -128,6 +130,12 @@ func main() {
 
 	// Setup attendance routes
 	attendance.SetupAttendanceRoutes(app)
+
+	// Setup fees routes
+	fees.SetupFeesRoutes(app)
+
+	// Setup academic routes
+	academic.RegisterRoutes(app, config.GetDB()) // Add this line
 
 	// Setup parents API routes
 	api := app.Group("/api/parents")
