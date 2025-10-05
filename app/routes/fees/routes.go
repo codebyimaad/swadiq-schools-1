@@ -53,4 +53,28 @@ func SetupFeesRoutes(app *fiber.App) {
 	feesAPI.Get("/stats", func(c *fiber.Ctx) error {
 		return GetFeeStatsAPI(c, config.GetDB())
 	})
+
+	// Fee Types routes
+	feeTypes := app.Group("/fee-types")
+	feeTypes.Use(auth.AuthMiddleware)
+
+	feeTypesAPI := app.Group("/api/fee-types")
+	feeTypesAPI.Use(auth.AuthMiddleware)
+
+	// Fee Types web route
+	feeTypes.Get("/", func(c *fiber.Ctx) error {
+		return c.Render("fees/fee_types", fiber.Map{
+			"Title":       "Fee Types - Swadiq Schools",
+			"CurrentPage": "fees",
+		})
+	})
+
+	// Fee Types API routes
+	feeTypesAPI.Get("/", func(c *fiber.Ctx) error {
+		return GetFeeTypesAPI(c, config.GetDB())
+	})
+
+	feeTypesAPI.Post("/", func(c *fiber.Ctx) error {
+		return CreateFeeTypeAPI(c, config.GetDB())
+	})
 }

@@ -20,7 +20,10 @@ func SetupSubjectsRoutes(app *fiber.App) {
 	api := app.Group("/api/subjects")
 	api.Use(auth.AuthMiddleware)
 	api.Get("/", GetSubjectsAPI)
+	api.Get("/:id", GetSubjectAPI)
 	api.Post("/", CreateSubjectAPI)
+	api.Put("/:id", UpdateSubjectAPI)
+	api.Delete("/:id", DeleteSubjectAPI)
 }
 
 func SubjectsPage(c *fiber.Ctx) error {

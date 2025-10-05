@@ -82,3 +82,15 @@ type Term struct {
 	DeletedAt      *time.Time    `json:"deleted_at,omitempty" gorm:"index"`
 	AcademicYear   *AcademicYear `json:"academic_year,omitempty" gorm:"foreignKey:AcademicYearID;references:ID"`
 }
+
+// IsCurrent checks if the academic year is current based on today's date
+func (ay *AcademicYear) IsCurrentByDate() bool {
+	now := time.Now()
+	return now.After(ay.StartDate.Time) && now.Before(ay.EndDate.Time)
+}
+
+// IsCurrent checks if the term is current based on today's date
+func (t *Term) IsCurrentByDate() bool {
+	now := time.Now()
+	return now.After(t.StartDate.Time) && now.Before(t.EndDate.Time)
+}

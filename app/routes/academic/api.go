@@ -203,3 +203,38 @@ func GetTermsByAcademicYear(c *fiber.Ctx, db *sql.DB) error {
 
 	return c.JSON(terms)
 }
+
+// SetCurrentAcademicYear sets an academic year as current
+func SetCurrentAcademicYear(c *fiber.Ctx, db *sql.DB) error {
+	academicYearID := c.Params("id")
+
+	if err := database.SetCurrentAcademicYear(db, academicYearID); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to set current academic year"})
+	}
+
+	return c.JSON(fiber.Map{"message": "Academic year set as current"})
+}
+
+// SetCurrentTerm sets a term as current
+func SetCurrentTerm(c *fiber.Ctx, db *sql.DB) error {
+	termID := c.Params("id")
+
+	if err := database.SetCurrentTerm(db, termID); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to set current term"})
+	}
+
+	return c.JSON(fiber.Map{"message": "Term set as current"})
+}
+
+// AutoSetCurrentByDate automatically sets current academic year and term based on current date
+func AutoSetCurrentByDate(c *fiber.Ctx, db *sql.DB) error {
+	if err := database.AutoSetCurrentAcademicYear(db); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to auto-set current academic year"})
+	}
+
+	if err := database.AutoSetCurrentTerm(db); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to auto-set current term"})
+	}
+
+	return c.JSON(fiber.Map{"message": "Current academic year and term set automatically"})
+}

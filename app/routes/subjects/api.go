@@ -30,32 +30,28 @@ func GetSubjectsAPI(c *fiber.Ctx) error {
 	})
 }
 
+func GetSubjectAPI(c *fiber.Ctx) error {
+	subjectID := c.Params("id")
+	
+	subject, err := database.GetSubjectByID(config.GetDB(), subjectID)
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Subject not found"})
+	}
+
+	return c.JSON(subject)
+}
+
 func CreateSubjectAPI(c *fiber.Ctx) error {
-	type CreateSubjectRequest struct {
-		Name         string `json:"name"`
-		Code         string `json:"code"`
-		DepartmentID string `json:"department_id"`
+	var subject models.Subject
+	if err := c.BodyParser(&subject); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
-	var req CreateSubjectRequest
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
-	}
-
-	if req.Name == "" || req.Code == "" {
+	if subject.Name == "" || subject.Code == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "Name and code are required"})
 	}
 
-	subject := &models.Subject{
-		Name: req.Name,
-		Code: req.Code,
-	}
-
-	if req.DepartmentID != "" {
-		subject.DepartmentID = &req.DepartmentID
-	}
-
-	if err := database.CreateSubject(config.GetDB(), subject); err != nil {
+	if err := database.CreateSubject(config.GetDB(), &subject); err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"error":   "Failed to create subject",
 			"details": err.Error(),
@@ -66,4 +62,34 @@ func CreateSubjectAPI(c *fiber.Ctx) error {
 		"message": "Subject created successfully",
 		"subject": subject,
 	})
+}
+
+func UpdateSubjectAPI(c *fiber.Ctx) error {
+	subjectID := c.Params("id")
+	
+	var subject models.Subject
+	if err := c.BodyParser(&subject); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	subject.ID = subjectID
+
+	if err := database.UpdateSubject(config.GetDB(), &subject); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to update subject"})
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "Subject updated successfully",
+		"subject": subject,
+	})
+}
+
+func DeleteSubjectAPI(c *fiber.Ctx) error {
+	subjectID := c.Params("id")
+
+	if err := database.DeleteSubject(config.GetDB(), subjectID); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete subject"})
+	}
+
+	return c.JSON(fiber.Map{"message": "Subject deleted successfully"})
 }

@@ -11,17 +11,20 @@ import (
 
 // FeeResponse represents the response structure for fees
 type FeeResponse struct {
-	ID          string     `json:"id"`
-	StudentID   string     `json:"student_id"`
-	Title       string     `json:"title"`
-	Amount      float64    `json:"amount"`
-	Paid        bool       `json:"paid"`
-	DueDate     time.Time  `json:"due_date"`
-	PaidAt      *time.Time `json:"paid_at,omitempty"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
-	StudentName string     `json:"student_name,omitempty"`
-	StudentCode string     `json:"student_code,omitempty"`
+	ID           string     `json:"id"`
+	StudentID    string     `json:"student_id"`
+	FeeTypeID    string     `json:"fee_type_id"`
+	Title        string     `json:"title"`
+	Amount       float64    `json:"amount"`
+	Paid         bool       `json:"paid"`
+	DueDate      time.Time  `json:"due_date"`
+	PaidAt       *time.Time `json:"paid_at,omitempty"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at"`
+	StudentName  string     `json:"student_name,omitempty"`
+	StudentCode  string     `json:"student_code,omitempty"`
+	FeeTypeName  string     `json:"fee_type_name,omitempty"`
+	FeeTypeCode  string     `json:"fee_type_code,omitempty"`
 }
 
 // FeeStatsResponse represents the response structure for fee statistics
@@ -41,13 +44,15 @@ func GetFeesAPI(c *fiber.Ctx, db *sql.DB) error {
 	status := c.Query("status") // "paid", "unpaid", "all"
 
 	// Build base query
-	baseQuery := `SELECT f.id, f.student_id, f.title, f.amount, f.paid, 
+	baseQuery := `SELECT f.id, f.student_id, f.fee_type_id, f.title, f.amount, f.paid, 
 				  f.due_date, f.paid_at, f.created_at, f.updated_at,
 				  s.first_name as student_first_name, s.last_name as student_last_name,
-				  s.student_id as student_code
+				  s.student_id as student_code,
+				  ft.name as fee_type_name, ft.code as fee_type_code
 				  FROM fees f
 				  JOIN students s ON f.student_id = s.id
-				  WHERE s.is_active = true`
+				  JOIN fee_types ft ON f.fee_type_id = ft.id
+				  WHERE s.is_active = true AND f.deleted_at IS NULL`
 
 	var conditions []string
 	var args []interface{}
@@ -93,12 +98,14 @@ func GetFeesAPI(c *fiber.Ctx, db *sql.DB) error {
 	for rows.Next() {
 		var fee FeeResponse
 		var studentFirstName, studentLastName, studentCode *string
+		var feeTypeName, feeTypeCode *string
 		var paidAt *time.Time
 
 		err := rows.Scan(
-			&fee.ID, &fee.StudentID, &fee.Title, &fee.Amount, &fee.Paid,
+			&fee.ID, &fee.StudentID, &fee.FeeTypeID, &fee.Title, &fee.Amount, &fee.Paid,
 			&fee.DueDate, &paidAt, &fee.CreatedAt, &fee.UpdatedAt,
 			&studentFirstName, &studentLastName, &studentCode,
+			&feeTypeName, &feeTypeCode,
 		)
 		if err != nil {
 			continue
@@ -110,6 +117,14 @@ func GetFeesAPI(c *fiber.Ctx, db *sql.DB) error {
 		}
 		if studentCode != nil {
 			fee.StudentCode = *studentCode
+		}
+
+		// Set fee type info
+		if feeTypeName != nil {
+			fee.FeeTypeName = *feeTypeName
+		}
+		if feeTypeCode != nil {
+			fee.FeeTypeCode = *feeTypeCode
 		}
 
 		// Set paid_at if exists

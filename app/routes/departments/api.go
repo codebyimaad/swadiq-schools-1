@@ -22,9 +22,11 @@ func GetDepartmentsAPI(c *fiber.Ctx) error {
 
 func CreateDepartmentAPI(c *fiber.Ctx) error {
 	type CreateDepartmentRequest struct {
-		Name                string `json:"name"`
-		Code                string `json:"code"`
-		HeadOfDepartmentID *string `json:"head_of_department_id"`
+		Name                string  `json:"name"`
+		Code                string  `json:"code"`
+		Description         *string `json:"description"`
+		HeadOfDepartmentID  *string `json:"head_of_department_id"`
+		AssistantHeadID     *string `json:"assistant_head_id"`
 	}
 
 	var req CreateDepartmentRequest
@@ -37,9 +39,11 @@ func CreateDepartmentAPI(c *fiber.Ctx) error {
 	}
 
 	department := &models.Department{
-		Name: req.Name,
-		Code: req.Code,
+		Name:               req.Name,
+		Code:               req.Code,
+		Description:        req.Description,
 		HeadOfDepartmentID: req.HeadOfDepartmentID,
+		AssistantHeadID:    req.AssistantHeadID,
 	}
 
 	if err := database.CreateDepartment(config.GetDB(), department); err != nil {
@@ -56,9 +60,11 @@ func UpdateDepartmentAPI(c *fiber.Ctx) error {
 	}
 
 	type UpdateDepartmentRequest struct {
-		Name                string `json:"name"`
-		Code                string `json:"code"`
-		HeadOfDepartmentID *string `json:"head_of_department_id"`
+		Name                string  `json:"name"`
+		Code                string  `json:"code"`
+		Description         *string `json:"description"`
+		HeadOfDepartmentID  *string `json:"head_of_department_id"`
+		AssistantHeadID     *string `json:"assistant_head_id"`
 	}
 
 	var req UpdateDepartmentRequest
@@ -71,10 +77,12 @@ func UpdateDepartmentAPI(c *fiber.Ctx) error {
 	}
 
 	department := &models.Department{
-		ID:   departmentID,
-		Name: req.Name,
-		Code: req.Code,
+		ID:                 departmentID,
+		Name:               req.Name,
+		Code:               req.Code,
+		Description:        req.Description,
 		HeadOfDepartmentID: req.HeadOfDepartmentID,
+		AssistantHeadID:    req.AssistantHeadID,
 	}
 
 	if err := database.UpdateDepartment(config.GetDB(), department); err != nil {

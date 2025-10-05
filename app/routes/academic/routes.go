@@ -17,6 +17,7 @@ func RegisterRoutes(app *fiber.App, db *sql.DB) {
 	app.Post("/api/academic-years", CreateAcademicYearHandler(db))
 	app.Put("/api/academic-years/:id", UpdateAcademicYearHandler(db))
 	app.Delete("/api/academic-years/:id", DeleteAcademicYearHandler(db))
+	app.Put("/api/academic-years/:id/set-current", SetCurrentAcademicYearHandler(db))
 
 	// Term routes
 	app.Get("/api/terms", GetAllTermsHandler(db))
@@ -24,9 +25,13 @@ func RegisterRoutes(app *fiber.App, db *sql.DB) {
 	app.Post("/api/terms", CreateTermHandler(db))
 	app.Put("/api/terms/:id", UpdateTermHandler(db))
 	app.Delete("/api/terms/:id", DeleteTermHandler(db))
+	app.Put("/api/terms/:id/set-current", SetCurrentTermHandler(db))
 
 	// Terms by Academic Year
 	app.Get("/api/academic-years/:academicYearId/terms", GetTermsByAcademicYearHandler(db))
+
+	// Auto-set current based on date
+	app.Post("/api/academic/auto-set-current", AutoSetCurrentByDateHandler(db))
 
 	// Serve the academic settings page
 	app.Get("/settings/academic", auth.AuthMiddleware, AcademicSettingsPageHandler(db))
@@ -282,5 +287,26 @@ func GetTermsByAcademicYearHandler(db *sql.DB) fiber.Handler {
 		}
 
 		return c.JSON(terms)
+	}
+}
+
+// SetCurrentAcademicYearHandler sets an academic year as current
+func SetCurrentAcademicYearHandler(db *sql.DB) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		return SetCurrentAcademicYear(c, db)
+	}
+}
+
+// SetCurrentTermHandler sets a term as current
+func SetCurrentTermHandler(db *sql.DB) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		return SetCurrentTerm(c, db)
+	}
+}
+
+// AutoSetCurrentByDateHandler automatically sets current academic year and term based on current date
+func AutoSetCurrentByDateHandler(db *sql.DB) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		return AutoSetCurrentByDate(c, db)
 	}
 }

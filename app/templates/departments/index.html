@@ -145,6 +145,13 @@
             </div>
 
             <div>
+                <label for="departmentDescription" class="block text-sm font-medium text-gray-700 mb-2">Description (Optional)</label>
+                <textarea id="departmentDescription" name="departmentDescription" rows="3"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          placeholder="Brief description of the department"></textarea>
+            </div>
+
+            <div>
                 <label for="classTeacher" class="block text-sm font-medium text-gray-700 mb-2">Head of Department (Optional)</label>
                 <div class="relative">
                     <input type="text" 
@@ -162,6 +169,27 @@
                         </svg>
                     </button>
                     <input type="hidden" id="headOfDepartment" name="headOfDepartment" value="">
+                </div>
+            </div>
+
+            <div>
+                <label for="assistantHead" class="block text-sm font-medium text-gray-700 mb-2">Assistant Head (Optional)</label>
+                <div class="relative">
+                    <input type="text" 
+                           id="selectedAssistantDisplay" 
+                           name="selectedAssistantDisplay" 
+                           readonly 
+                           onclick="openAssistantModal()"
+                           class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white cursor-pointer"
+                           placeholder="Select a teacher">
+                    <button type="button" 
+                            onclick="openAssistantModal()"
+                            class="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                    </button>
+                    <input type="hidden" id="assistantHead" name="assistantHead" value="">
                 </div>
             </div>
 
@@ -206,6 +234,13 @@
             </div>
 
             <div>
+                <label for="editDepartmentDescription" class="block text-sm font-medium text-gray-700 mb-2">Description (Optional)</label>
+                <textarea id="editDepartmentDescription" name="editDepartmentDescription" rows="3"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          placeholder="Brief description of the department"></textarea>
+            </div>
+
+            <div>
                 <label for="editHeadOfDepartment" class="block text-sm font-medium text-gray-700 mb-2">Head of Department (Optional)</label>
                 <div class="relative">
                     <input type="text" 
@@ -223,6 +258,27 @@
                         </svg>
                     </button>
                     <input type="hidden" id="editHeadOfDepartment" name="editHeadOfDepartment" value="">
+                </div>
+            </div>
+
+            <div>
+                <label for="editAssistantHead" class="block text-sm font-medium text-gray-700 mb-2">Assistant Head (Optional)</label>
+                <div class="relative">
+                    <input type="text" 
+                           id="editSelectedAssistantDisplay" 
+                           name="editSelectedAssistantDisplay" 
+                           readonly 
+                           onclick="openAssistantModal()"
+                           class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white cursor-pointer"
+                           placeholder="Select a teacher">
+                    <button type="button" 
+                            onclick="openAssistantModal()"
+                            class="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                    </button>
+                    <input type="hidden" id="editAssistantHead" name="editAssistantHead" value="">
                 </div>
             </div>
 
@@ -446,7 +502,9 @@
         const data = {
             name: formData.get('departmentName'),
             code: formData.get('departmentCode'),
-            head_of_department_id: formData.get('headOfDepartment'),
+            description: formData.get('departmentDescription') || null,
+            head_of_department_id: formData.get('headOfDepartment') || null,
+            assistant_head_id: formData.get('assistantHead') || null,
         };
 
         try {
@@ -484,7 +542,9 @@
         const data = {
             name: formData.get('editDepartmentName'),
             code: formData.get('editDepartmentCode'),
-            head_of_department_id: formData.get('editHeadOfDepartment'),
+            description: formData.get('editDepartmentDescription') || null,
+            head_of_department_id: formData.get('editHeadOfDepartment') || null,
+            assistant_head_id: formData.get('editAssistantHead') || null,
         };
 
         try {

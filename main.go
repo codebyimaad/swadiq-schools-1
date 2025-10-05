@@ -150,6 +150,12 @@ func main() {
 	classesAPI.Get("/", classes.GetClassesAPI)
 	classesAPI.Post("/", classes.CreateClassAPI)
 
+	// Setup roles API routes
+	rolesAPI := app.Group("/api/roles")
+	rolesAPI.Use(auth.AuthMiddleware)
+	rolesAPI.Get("/", teachers.GetRolesAPI)
+	rolesAPI.Post("/", teachers.CreateRoleAPI)
+
 	// Catch-all route for 404 errors (must be last)
 	app.Use("*", func(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusNotFound, "Page not found")

@@ -1091,17 +1091,22 @@ func CreateClass(db *sql.DB, class *models.Class) error {
 
 // Teacher-related functions
 func GetAllTeachers(db *sql.DB) ([]*models.User, error) {
-	query := `SELECT u.id, u.email, u.first_name, u.last_name, u.is_active, u.created_at, u.updated_at
+	query := `SELECT DISTINCT u.id, u.email, u.first_name, u.last_name, u.is_active, u.created_at, u.updated_at,
+			  STRING_AGG(DISTINCT r.name, ', ') as roles,
+			  d.name as department_name,
+			  STRING_AGG(DISTINCT c.name, ', ') as class_names
 			  FROM users u
 			  INNER JOIN user_roles ur ON u.id = ur.user_id
 			  INNER JOIN roles r ON ur.role_id = r.id
-			  WHERE r.name IN ('class_teacher', 'subject_teacher')
+			  LEFT JOIN departments d ON (d.head_of_department_id = u.id OR d.assistant_head_id = u.id)
+			  LEFT JOIN classes c ON c.teacher_id = u.id AND c.is_active = true
+			  WHERE r.name IN ('admin', 'head_teacher', 'class_teacher', 'subject_teacher')
 			  AND u.is_active = true
+			  GROUP BY u.id, u.email, u.first_name, u.last_name, u.is_active, u.created_at, u.updated_at, d.name
 			  ORDER BY u.first_name, u.last_name`
 
 	rows, err := db.Query(query)
 	if err != nil {
-		// Return empty slice instead of error for better UX
 		return []*models.User{}, nil
 	}
 	defer rows.Close()
@@ -1109,17 +1114,83 @@ func GetAllTeachers(db *sql.DB) ([]*models.User, error) {
 	var teachers []*models.User
 	for rows.Next() {
 		teacher := &models.User{}
+		var roles string
+		var departmentName *string
+		var classNames *string
 		err := rows.Scan(
 			&teacher.ID, &teacher.Email, &teacher.FirstName, &teacher.LastName,
-			&teacher.IsActive, &teacher.CreatedAt, &teacher.UpdatedAt,
+			&teacher.IsActive, &teacher.CreatedAt, &teacher.UpdatedAt, &roles, &departmentName, &classNames,
 		)
 		if err != nil {
-			continue // Skip invalid rows instead of failing
+			continue
+		}
+		
+		if departmentName != nil {
+			teacher.Department = &models.Department{Name: *departmentName}
+		}
+		
+		if roles != "" {
+			roleNames := strings.Split(roles, ", ")
+			for _, roleName := range roleNames {
+				teacher.Roles = append(teacher.Roles, &models.Role{Name: roleName})
+			}
+		}
+		
+		if classNames != nil && *classNames != "" {
+			names := strings.Split(*classNames, ", ")
+			for _, name := range names {
+				teacher.Classes = append(teacher.Classes, &models.Class{Name: name})
+			}
+		}
+		
+		teachers = append(teachers, teacher)
+	}
+
+	if teachers == nil {
+		teachers = []*models.User{}
+	}
+
+	return teachers, nil
+}
+
+func GetTeachersWithDetails(db *sql.DB) ([]*models.User, error) {
+	query := `SELECT DISTINCT u.id, u.email, u.first_name, u.last_name, u.is_active, u.created_at, u.updated_at,
+			  STRING_AGG(DISTINCT r.name, ', ') as roles,
+			  COUNT(DISTINCT c.id) as class_count,
+			  COUNT(DISTINCT s.id) as subject_count
+			  FROM users u
+			  INNER JOIN user_roles ur ON u.id = ur.user_id
+			  INNER JOIN roles r ON ur.role_id = r.id
+			  LEFT JOIN classes c ON u.id = c.teacher_id AND c.is_active = true
+			  LEFT JOIN papers p ON u.id = p.teacher_id AND p.is_active = true
+			  LEFT JOIN subjects s ON p.subject_id = s.id AND s.is_active = true
+			  WHERE r.name IN ('admin', 'head_teacher', 'class_teacher', 'subject_teacher')
+			  AND u.is_active = true
+			  GROUP BY u.id, u.email, u.first_name, u.last_name, u.is_active, u.created_at, u.updated_at
+			  ORDER BY u.first_name, u.last_name`
+
+	rows, err := db.Query(query)
+	if err != nil {
+		return []*models.User{}, nil
+	}
+	defer rows.Close()
+
+	var teachers []*models.User
+	for rows.Next() {
+		teacher := &models.User{}
+		var roles string
+		var classCount, subjectCount int
+		err := rows.Scan(
+			&teacher.ID, &teacher.Email, &teacher.FirstName, &teacher.LastName,
+			&teacher.IsActive, &teacher.CreatedAt, &teacher.UpdatedAt, &roles,
+			&classCount, &subjectCount,
+		)
+		if err != nil {
+			continue
 		}
 		teachers = append(teachers, teacher)
 	}
 
-	// Ensure we always return a valid slice
 	if teachers == nil {
 		teachers = []*models.User{}
 	}
@@ -1135,21 +1206,13 @@ func CreateTeacher(db *sql.DB, user *models.User) error {
 	}
 
 	// Create user account
-	query := `INSERT INTO users (email, password, first_name, last_name, phone, is_active, created_at, updated_at)
-			  VALUES ($1, $2, $3, $4, $5, true, NOW(), NOW())
+	query := `INSERT INTO users (email, password, first_name, last_name, is_active, created_at, updated_at)
+			  VALUES ($1, $2, $3, $4, true, NOW(), NOW())
 			  RETURNING id, created_at, updated_at`
 
-	var userID int
-	err = db.QueryRow(query, user.Email, hashedPassword, user.FirstName, user.LastName, user.Phone).Scan(
-		&userID, &user.CreatedAt, &user.UpdatedAt,
+	err = db.QueryRow(query, user.Email, hashedPassword, user.FirstName, user.LastName).Scan(
+		&user.ID, &user.CreatedAt, &user.UpdatedAt,
 	)
-
-	if err != nil {
-		return err
-	}
-
-	// Convert integer ID to string for the model
-	user.ID = fmt.Sprintf("%d", userID)
 
 	if err != nil {
 		return err
@@ -1161,7 +1224,7 @@ func CreateTeacher(db *sql.DB, user *models.User) error {
 				  FROM roles r
 				  WHERE r.name = 'class_teacher'`
 
-	_, err = db.Exec(roleQuery, userID)
+	_, err = db.Exec(roleQuery, user.ID)
 	if err != nil {
 		return err
 	}
@@ -1170,13 +1233,178 @@ func CreateTeacher(db *sql.DB, user *models.User) error {
 	return nil
 }
 
+// GetTeachersByRole gets teachers filtered by specific role
+func GetTeachersByRole(db *sql.DB, roleName string) ([]*models.User, error) {
+	query := `SELECT DISTINCT u.id, u.email, u.first_name, u.last_name, u.is_active, u.created_at, u.updated_at
+			  FROM users u
+			  INNER JOIN user_roles ur ON u.id = ur.user_id
+			  INNER JOIN roles r ON ur.role_id = r.id
+			  WHERE r.name = $1 AND u.is_active = true
+			  ORDER BY u.first_name, u.last_name`
+
+	rows, err := db.Query(query, roleName)
+	if err != nil {
+		return []*models.User{}, nil
+	}
+	defer rows.Close()
+
+	var teachers []*models.User
+	for rows.Next() {
+		teacher := &models.User{}
+		err := rows.Scan(
+			&teacher.ID, &teacher.Email, &teacher.FirstName, &teacher.LastName,
+			&teacher.IsActive, &teacher.CreatedAt, &teacher.UpdatedAt,
+		)
+		if err != nil {
+			continue
+		}
+		teachers = append(teachers, teacher)
+	}
+
+	return teachers, nil
+}
+
+// AssignTeacherRole assigns a role to a teacher
+func AssignTeacherRole(db *sql.DB, teacherID string, roleName string) error {
+	query := `INSERT INTO user_roles (user_id, role_id, created_at)
+			  SELECT $1, r.id, NOW()
+			  FROM roles r
+			  WHERE r.name = $2
+			  ON CONFLICT (user_id, role_id) DO NOTHING`
+
+	_, err := db.Exec(query, teacherID, roleName)
+	return err
+}
+
+// RemoveTeacherRole removes a role from a teacher
+func RemoveTeacherRole(db *sql.DB, teacherID string, roleName string) error {
+	query := `DELETE FROM user_roles 
+			  WHERE user_id = $1 
+			  AND role_id = (SELECT id FROM roles WHERE name = $2)`
+
+	_, err := db.Exec(query, teacherID, roleName)
+	return err
+}
+
+// GetTeacherClasses gets all classes assigned to a teacher
+func GetTeacherClasses(db *sql.DB, teacherID string) ([]*models.Class, error) {
+	query := `SELECT c.id, c.name, c.teacher_id, c.is_active, c.created_at, c.updated_at,
+			  COUNT(DISTINCT s.id) as student_count
+			  FROM classes c
+			  LEFT JOIN students s ON c.id = s.class_id AND s.is_active = true
+			  WHERE c.teacher_id = $1 AND c.is_active = true
+			  GROUP BY c.id, c.name, c.teacher_id, c.is_active, c.created_at, c.updated_at
+			  ORDER BY c.name`
+
+	rows, err := db.Query(query, teacherID)
+	if err != nil {
+		return []*models.Class{}, nil
+	}
+	defer rows.Close()
+
+	var classes []*models.Class
+	for rows.Next() {
+		class := &models.Class{}
+		var studentCount int
+		err := rows.Scan(
+			&class.ID, &class.Name, &class.TeacherID,
+			&class.IsActive, &class.CreatedAt, &class.UpdatedAt, &studentCount,
+		)
+		if err != nil {
+			continue
+		}
+		classes = append(classes, class)
+	}
+
+	return classes, nil
+}
+
+// GetTeacherSubjects gets all subjects taught by a teacher
+func GetTeacherSubjects(db *sql.DB, teacherID string) ([]*models.Subject, error) {
+	query := `SELECT DISTINCT s.id, s.name, s.code, s.department_id, s.is_active, s.created_at, s.updated_at,
+			  d.name as department_name
+			  FROM subjects s
+			  INNER JOIN papers p ON s.id = p.subject_id
+			  LEFT JOIN departments d ON s.department_id = d.id
+			  WHERE p.teacher_id = $1 AND s.is_active = true AND p.is_active = true
+			  ORDER BY s.name`
+
+	rows, err := db.Query(query, teacherID)
+	if err != nil {
+		return []*models.Subject{}, nil
+	}
+	defer rows.Close()
+
+	var subjects []*models.Subject
+	for rows.Next() {
+		subject := &models.Subject{}
+		var departmentName *string
+		err := rows.Scan(
+			&subject.ID, &subject.Name, &subject.Code, &subject.DepartmentID,
+			&subject.IsActive, &subject.CreatedAt, &subject.UpdatedAt, &departmentName,
+		)
+		if err != nil {
+			continue
+		}
+
+		if departmentName != nil && subject.DepartmentID != nil {
+			subject.Department = &models.Department{
+				ID:   *subject.DepartmentID,
+				Name: *departmentName,
+			}
+		}
+
+		subjects = append(subjects, subject)
+	}
+
+	return subjects, nil
+}
+
+// SearchTeachers searches for teachers by name or email
+func SearchTeachers(db *sql.DB, searchTerm string) ([]*models.User, error) {
+	searchPattern := "%" + searchTerm + "%"
+	query := `SELECT DISTINCT u.id, u.email, u.first_name, u.last_name, u.is_active, u.created_at, u.updated_at
+			  FROM users u
+			  INNER JOIN user_roles ur ON u.id = ur.user_id
+			  INNER JOIN roles r ON ur.role_id = r.id
+			  WHERE r.name IN ('admin', 'head_teacher', 'class_teacher', 'subject_teacher')
+			  AND u.is_active = true
+			  AND (LOWER(u.first_name) LIKE LOWER($1)
+			       OR LOWER(u.last_name) LIKE LOWER($1)
+			       OR LOWER(u.email) LIKE LOWER($1)
+			       OR LOWER(CONCAT(u.first_name, ' ', u.last_name)) LIKE LOWER($1))
+			  ORDER BY u.first_name, u.last_name
+			  LIMIT 20`
+
+	rows, err := db.Query(query, searchPattern)
+	if err != nil {
+		return []*models.User{}, nil
+	}
+	defer rows.Close()
+
+	var teachers []*models.User
+	for rows.Next() {
+		teacher := &models.User{}
+		err := rows.Scan(
+			&teacher.ID, &teacher.Email, &teacher.FirstName, &teacher.LastName,
+			&teacher.IsActive, &teacher.CreatedAt, &teacher.UpdatedAt,
+		)
+		if err != nil {
+			continue
+		}
+		teachers = append(teachers, teacher)
+	}
+
+	return teachers, nil
+}
+
 // UpdateTeacher updates an existing teacher's information
 func UpdateTeacher(db *sql.DB, user *models.User) error {
 	query := `UPDATE users
-			  SET first_name = $1, last_name = $2, email = $3, phone = $4, updated_at = NOW()
-			  WHERE id = $5 AND is_active = true`
+			  SET first_name = $1, last_name = $2, email = $3, updated_at = NOW()
+			  WHERE id = $4 AND is_active = true`
 
-	_, err := db.Exec(query, user.FirstName, user.LastName, user.Email, user.Phone, user.ID)
+	_, err := db.Exec(query, user.FirstName, user.LastName, user.Email, user.ID)
 	if err != nil {
 		return fmt.Errorf("failed to update teacher: %v", err)
 	}
@@ -1288,11 +1516,11 @@ func GetAllDepartments(db *sql.DB) ([]*models.Department, error) {
 }
 
 func CreateDepartment(db *sql.DB, department *models.Department) error {
-	query := `INSERT INTO departments (name, code, head_of_department_id, is_active, created_at, updated_at)
-			  VALUES ($1, $2, $3, true, NOW(), NOW())
+	query := `INSERT INTO departments (name, code, description, head_of_department_id, assistant_head_id, is_active, created_at, updated_at)
+			  VALUES ($1, $2, $3, $4, $5, true, NOW(), NOW())
 			  RETURNING id, created_at, updated_at`
 
-	err := db.QueryRow(query, department.Name, department.Code, department.HeadOfDepartmentID).Scan(
+	err := db.QueryRow(query, department.Name, department.Code, department.Description, department.HeadOfDepartmentID, department.AssistantHeadID).Scan(
 		&department.ID, &department.CreatedAt, &department.UpdatedAt,
 	)
 
@@ -1305,8 +1533,8 @@ func CreateDepartment(db *sql.DB, department *models.Department) error {
 }
 
 func UpdateDepartment(db *sql.DB, department *models.Department) error {
-	query := `UPDATE departments SET name = $1, code = $2, head_of_department_id = $3, updated_at = NOW() WHERE id = $4`
-	_, err := db.Exec(query, department.Name, department.Code, department.HeadOfDepartmentID, department.ID)
+	query := `UPDATE departments SET name = $1, code = $2, description = $3, head_of_department_id = $4, assistant_head_id = $5, updated_at = NOW() WHERE id = $6`
+	_, err := db.Exec(query, department.Name, department.Code, department.Description, department.HeadOfDepartmentID, department.AssistantHeadID, department.ID)
 	return err
 }
 
@@ -1358,6 +1586,49 @@ func GetAllSubjects(db *sql.DB) ([]*models.Subject, error) {
 	}
 
 	return subjects, nil
+}
+
+func GetSubjectByID(db *sql.DB, subjectID string) (*models.Subject, error) {
+	query := `SELECT s.id, s.name, s.code, s.department_id, s.is_active, s.created_at, s.updated_at,
+			  d.name as department_name
+			  FROM subjects s
+			  LEFT JOIN departments d ON s.department_id = d.id
+			  WHERE s.id = $1`
+
+	subject := &models.Subject{}
+	var departmentName *string
+	
+	err := db.QueryRow(query, subjectID).Scan(
+		&subject.ID, &subject.Name, &subject.Code, &subject.DepartmentID,
+		&subject.IsActive, &subject.CreatedAt, &subject.UpdatedAt, &departmentName,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set department if exists
+	if departmentName != nil && subject.DepartmentID != nil {
+		subject.Department = &models.Department{
+			ID:   *subject.DepartmentID,
+			Name: *departmentName,
+		}
+	}
+
+	return subject, nil
+}
+
+func UpdateSubject(db *sql.DB, subject *models.Subject) error {
+	query := `UPDATE subjects SET name = $1, code = $2, department_id = $3, is_active = $4, updated_at = NOW()
+			  WHERE id = $5`
+	
+	_, err := db.Exec(query, subject.Name, subject.Code, subject.DepartmentID, subject.IsActive, subject.ID)
+	return err
+}
+
+func DeleteSubject(db *sql.DB, subjectID string) error {
+	query := `UPDATE subjects SET is_active = false, updated_at = NOW() WHERE id = $1`
+	_, err := db.Exec(query, subjectID)
+	return err
 }
 
 // Attendance-related functions
@@ -1834,24 +2105,59 @@ func GetTermsByAcademicYearID(db *sql.DB, academicYearID string) ([]*models.Term
 }
 
 func CreateTerm(db *sql.DB, term *models.Term) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// If this term is being set as current, make all other terms not current
+	if term.IsCurrent {
+		_, err = tx.Exec("UPDATE terms SET is_current = false")
+		if err != nil {
+			return err
+		}
+	}
+
 	query := `INSERT INTO terms (academic_year_id, name, start_date, end_date, is_current, is_active, created_at, updated_at)
 			  VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
 			  RETURNING id, created_at, updated_at`
 
-	err := db.QueryRow(query, term.AcademicYearID, term.Name, term.StartDate.Time, term.EndDate.Time,
+	err = tx.QueryRow(query, term.AcademicYearID, term.Name, term.StartDate.Time, term.EndDate.Time,
 		term.IsCurrent, term.IsActive).Scan(
 		&term.ID, &term.CreatedAt, &term.UpdatedAt,
 	)
+	if err != nil {
+		return err
+	}
 
-	return err
+	return tx.Commit()
 }
 
 func UpdateTerm(db *sql.DB, term *models.Term) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// If this term is being set as current, make all other terms not current
+	if term.IsCurrent {
+		_, err = tx.Exec("UPDATE terms SET is_current = false WHERE id != $1", term.ID)
+		if err != nil {
+			return err
+		}
+	}
+
 	query := `UPDATE terms SET academic_year_id = $1, name = $2, start_date = $3, end_date = $4,
 			  is_current = $5, is_active = $6, updated_at = NOW() WHERE id = $7`
-	_, err := db.Exec(query, term.AcademicYearID, term.Name, term.StartDate.Time, term.EndDate.Time,
+	_, err = tx.Exec(query, term.AcademicYearID, term.Name, term.StartDate.Time, term.EndDate.Time,
 		term.IsCurrent, term.IsActive, term.ID)
-	return err
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func DeleteTerm(db *sql.DB, termID string) error {
@@ -1941,4 +2247,64 @@ func GetTermByID(db *sql.DB, termID string) (*models.Term, error) {
 	}
 
 	return term, nil
+}
+
+// SetCurrentAcademicYear sets one academic year as current and all others as not current
+func SetCurrentAcademicYear(db *sql.DB, academicYearID string) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Set all academic years as not current
+	_, err = tx.Exec("UPDATE academic_years SET is_current = false")
+	if err != nil {
+		return err
+	}
+
+	// Set the specified academic year as current
+	_, err = tx.Exec("UPDATE academic_years SET is_current = true WHERE id = $1", academicYearID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+// SetCurrentTerm sets one term as current and all others as not current
+func SetCurrentTerm(db *sql.DB, termID string) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Set all terms as not current
+	_, err = tx.Exec("UPDATE terms SET is_current = false")
+	if err != nil {
+		return err
+	}
+
+	// Set the specified term as current
+	_, err = tx.Exec("UPDATE terms SET is_current = true WHERE id = $1", termID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+// AutoSetCurrentAcademicYear automatically sets current academic year based on current date
+func AutoSetCurrentAcademicYear(db *sql.DB) error {
+	query := `UPDATE academic_years SET is_current = (NOW() BETWEEN start_date AND end_date)`
+	_, err := db.Exec(query)
+	return err
+}
+
+// AutoSetCurrentTerm automatically sets current term based on current date
+func AutoSetCurrentTerm(db *sql.DB) error {
+	query := `UPDATE terms SET is_current = (NOW() BETWEEN start_date AND end_date)`
+	_, err := db.Exec(query)
+	return err
 }

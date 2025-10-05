@@ -1,0 +1,136 @@
+<!-- Teacher Details Content -->
+<div class="p-4 lg:p-6">
+    <!-- Header Section -->
+    <div class="mb-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <a href="/teachers" class="text-gray-400 hover:text-gray-600 transition-colors duration-200">
+                    <i class="fas fa-arrow-left text-xl"></i>
+                </a>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900 mb-1">{{.teacher.FirstName}} {{.teacher.LastName}}</h1>
+                    <p class="text-gray-600 text-sm">Teacher Details</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors duration-200 text-sm">
+                    <i class="fas fa-edit mr-2"></i>Edit
+                </button>
+                <button class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 text-sm">
+                    <i class="fas fa-trash mr-2"></i>Delete
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Teacher Information Cards -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Personal Information -->
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Personal Information</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 mb-1">Full Name</label>
+                        <p class="text-gray-900">{{.teacher.FirstName}} {{.teacher.LastName}}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 mb-1">Employee ID</label>
+                        <p class="text-gray-900">EMP-{{.teacher.ID}}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 mb-1">Email Address</label>
+                        <p class="text-gray-900">{{.teacher.Email}}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 mb-1">Status</label>
+                        {{if .teacher.IsActive}}
+                        <span class="inline-flex px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">Active</span>
+                        {{else}}
+                        <span class="inline-flex px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full">Inactive</span>
+                        {{end}}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Classes Assigned -->
+            {{if .classes}}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mt-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Classes Assigned</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {{range .classes}}
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <h3 class="font-medium text-gray-900">{{.Name}}</h3>
+                        <p class="text-sm text-gray-500 mt-1">{{len .Students}} students</p>
+                    </div>
+                    {{end}}
+                </div>
+            </div>
+            {{end}}
+
+            <!-- Subjects Teaching -->
+            {{if .subjects}}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mt-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Subjects Teaching</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {{range .subjects}}
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <h3 class="font-medium text-gray-900">{{.Name}}</h3>
+                        <p class="text-sm text-gray-500 mt-1">{{.Code}}</p>
+                        {{if .Department}}
+                        <p class="text-xs text-gray-400 mt-1">{{.Department.Name}}</p>
+                        {{end}}
+                    </div>
+                    {{end}}
+                </div>
+            </div>
+            {{end}}
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="space-y-6">
+            <!-- Profile Card -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
+                <div class="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-user text-white text-2xl"></i>
+                </div>
+                <h3 class="font-semibold text-gray-900">{{.teacher.FirstName}} {{.teacher.LastName}}</h3>
+                <p class="text-sm text-gray-500 mt-1">{{if .roles}}{{range $i, $role := .roles}}{{if $i}}, {{end}}{{$role.Name}}{{end}}{{else}}Teacher{{end}}</p>
+            </div>
+
+            <!-- Statistics -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <h3 class="font-semibold text-gray-900 mb-4">Statistics</h3>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">Classes</span>
+                        <span class="font-medium text-gray-900">{{if .classes}}{{len .classes}}{{else}}0{{end}}</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">Subjects</span>
+                        <span class="font-medium text-gray-900">{{if .subjects}}{{len .subjects}}{{else}}0{{end}}</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">Total Students</span>
+                        <span class="font-medium text-gray-900">{{.totalStudents}}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <h3 class="font-semibold text-gray-900 mb-4">Recent Activity</h3>
+                <div class="space-y-3">
+                    <div class="text-sm">
+                        <p class="text-gray-600">Joined on</p>
+                        <p class="font-medium text-gray-900">{{.teacher.CreatedAt.Format "Jan 2, 2006"}}</p>
+                    </div>
+                    <div class="text-sm">
+                        <p class="text-gray-600">Last Updated</p>
+                        <p class="font-medium text-gray-900">{{.teacher.UpdatedAt.Format "Jan 2, 2006"}}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -22,13 +22,11 @@ func GetTeachersAPI(c *fiber.Ctx) error {
 
 func CreateTeacherAPI(c *fiber.Ctx) error {
 	type CreateTeacherRequest struct {
-		FirstName    string   `json:"first_name"`
-		LastName     string   `json:"last_name"`
-		Email        string   `json:"email"`
-		Password     string   `json:"password"`
-		Phone        string   `json:"phone"`
-		DepartmentID string   `json:"department_id"`
-		SubjectIDs   []string `json:"subject_ids"`
+		FirstName string `json:"first_name"`
+		LastName  string `json:"last_name"`
+		Email     string `json:"email"`
+		Password  string `json:"password"`
+		Role      string `json:"role"`
 	}
 
 	var req CreateTeacherRequest
@@ -40,13 +38,16 @@ func CreateTeacherAPI(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "First name, last name, email, and password are required"})
 	}
 
-	// Create user account for teacher
+	// Default role if not provided
+	if req.Role == "" {
+		req.Role = "class_teacher"
+	}
+
 	user := &models.User{
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
 		Email:     req.Email,
-		Password:  req.Password, // This will be hashed in the database function
-		Phone:     req.Phone,
+		Password:  req.Password,
 	}
 
 	if err := database.CreateTeacher(config.GetDB(), user); err != nil {
@@ -56,11 +57,19 @@ func CreateTeacherAPI(c *fiber.Ctx) error {
 		})
 	}
 
+	// Assign the specified role
+	if req.Role != "class_teacher" {
+		if err := database.AssignTeacherRole(config.GetDB(), user.ID, req.Role); err != nil {
+			return c.Status(500).JSON(fiber.Map{
+				"error":   "Teacher created but failed to assign role",
+				"details": err.Error(),
+			})
+		}
+	}
+
 	return c.Status(201).JSON(fiber.Map{
-		"message":       "Teacher created successfully",
-		"teacher":       user,
-		"department_id": req.DepartmentID,
-		"subject_ids":   req.SubjectIDs,
+		"message": "Teacher created successfully",
+		"teacher": user,
 	})
 }
 
@@ -115,7 +124,7 @@ func UpdateTeacherAPI(c *fiber.Ctx) error {
 		FirstName string `json:"first_name"`
 		LastName  string `json:"last_name"`
 		Email     string `json:"email"`
-		Phone     string `json:"phone"`
+		Role      string `json:"role"`
 	}
 
 	var req UpdateTeacherRequest
@@ -137,10 +146,24 @@ func UpdateTeacherAPI(c *fiber.Ctx) error {
 	existingTeacher.FirstName = req.FirstName
 	existingTeacher.LastName = req.LastName
 	existingTeacher.Email = req.Email
-	existingTeacher.Phone = req.Phone
 
 	if err := database.UpdateTeacher(config.GetDB(), existingTeacher); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to update teacher"})
+	}
+
+	// Update role if provided
+	if req.Role != "" {
+		// Remove existing teacher roles first
+		db := config.GetDB()
+		_, err := db.Exec("DELETE FROM user_roles WHERE user_id = $1 AND role_id IN (SELECT id FROM roles WHERE name IN ('class_teacher', 'subject_teacher', 'head_teacher', 'admin'))", teacherID)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to update role"})
+		}
+		
+		// Assign new role
+		if err := database.AssignTeacherRole(config.GetDB(), teacherID, req.Role); err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to assign new role"})
+		}
 	}
 
 	return c.JSON(fiber.Map{
@@ -191,5 +214,64 @@ func GetSubjectsAPI(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"subjects": subjects,
 		"count":    len(subjects),
+	})
+}
+
+func GetRolesAPI(c *fiber.Ctx) error {
+	query := `SELECT id, name, is_active, created_at, updated_at FROM roles ORDER BY name`
+	rows, err := config.GetDB().Query(query)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch roles"})
+	}
+	defer rows.Close()
+
+	var roles []map[string]interface{}
+	for rows.Next() {
+		var id, name string
+		var isActive bool
+		var createdAt, updatedAt string
+		
+		err := rows.Scan(&id, &name, &isActive, &createdAt, &updatedAt)
+		if err != nil {
+			continue
+		}
+		
+		roles = append(roles, map[string]interface{}{
+			"id": id,
+			"name": name,
+			"is_active": isActive,
+			"created_at": createdAt,
+			"updated_at": updatedAt,
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"roles": roles,
+		"count": len(roles),
+	})
+}
+
+func CreateRoleAPI(c *fiber.Ctx) error {
+	type CreateRoleRequest struct {
+		Name string `json:"name"`
+	}
+
+	var req CreateRoleRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+
+	if req.Name == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Role name is required"})
+	}
+
+	query := `INSERT INTO roles (name, is_active, created_at, updated_at) VALUES ($1, true, NOW(), NOW())`
+	_, err := config.GetDB().Exec(query, req.Name)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create role"})
+	}
+
+	return c.Status(201).JSON(fiber.Map{
+		"message": "Role created successfully",
 	})
 }
