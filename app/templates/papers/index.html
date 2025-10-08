@@ -1,8 +1,3 @@
-{{template "layouts/base" .}}
-
-{{define "title"}}Papers Management{{end}}
-
-{{define "content"}}
 <div class="min-h-screen bg-gray-50">
     <!-- Header -->
     <div class="bg-white shadow-sm border-b border-gray-200">
@@ -84,15 +79,28 @@
         <!-- Papers Table -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div class="px-6 py-4 border-b border-gray-200">
-                <div class="flex justify-between items-center">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <h2 class="text-lg font-semibold text-gray-900">All Papers</h2>
-                    <div class="flex items-center gap-3">
-                        <div class="relative">
-                            <input type="text" placeholder="Search papers..." 
-                                   class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
+                        <div class="relative w-full sm:w-64">
+                            <input type="text" id="paperSearch" placeholder="Search papers..." 
+                                   class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
                             <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                             </svg>
+                        </div>
+                        <div class="flex gap-2">
+                            <select id="statusFilter" class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                                <option value="">All Status</option>
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
+                            <select id="subjectFilter" class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                                <option value="">All Subjects</option>
+                                {{range .subjects}}
+                                <option value="{{.ID}}">{{.Name}}</option>
+                                {{end}}
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -102,18 +110,17 @@
                 <table class="w-full">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paper</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paper Code</th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teacher</th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
+                    <tbody class="bg-white divide-y divide-gray-200" id="papersTableBody">
                         {{if .papers}}
                             {{range .papers}}
-                            <tr class="hover:bg-gray-50">
+                            <tr class="hover:bg-gray-50 paper-row" data-code="{{.Code}}" data-subject="{{if .Subject}}{{.Subject.Name}}{{end}}" data-status="{{if .IsActive}}active{{else}}inactive{{end}}">
                                 <td class="px-4 py-3">
                                     <div class="flex items-center">
                                         <div class="bg-primary-100 p-2 rounded-lg mr-3">
@@ -122,12 +129,9 @@
                                             </svg>
                                         </div>
                                         <div>
-                                            <p class="text-sm font-medium text-gray-900">{{.Name}}</p>
+                                            <p class="text-sm font-medium text-gray-900">{{.Code}}</p>
                                         </div>
                                     </div>
-                                </td>
-                                <td class="px-4 py-3">
-                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">{{.Code}}</span>
                                 </td>
                                 <td class="px-4 py-3 text-sm text-gray-900">
                                     {{if .Subject}}
@@ -160,7 +164,7 @@
                             {{end}}
                         {{else}}
                             <tr>
-                                <td colspan="6" class="px-4 py-8 text-center text-gray-500">
+                                <td colspan="5" class="px-4 py-8 text-center text-gray-500">
                                     <div class="flex flex-col items-center">
                                         <svg class="w-12 h-12 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
@@ -173,6 +177,24 @@
                         {{end}}
                     </tbody>
                 </table>
+            </div>
+            
+            <!-- Pagination -->
+            <div class="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                <div class="text-sm text-gray-700">
+                    Showing <span class="font-medium">1</span> to <span class="font-medium">{{len .papers}}</span> of <span class="font-medium">{{len .papers}}</span> results
+                </div>
+                <div class="flex space-x-2">
+                    <button class="px-3 py-1 rounded-md bg-gray-100 text-gray-600 text-sm font-medium cursor-not-allowed">
+                        Previous
+                    </button>
+                    <button class="px-3 py-1 rounded-md bg-primary-600 text-white text-sm font-medium">
+                        1
+                    </button>
+                    <button class="px-3 py-1 rounded-md bg-gray-100 text-gray-600 text-sm font-medium cursor-not-allowed">
+                        Next
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -192,36 +214,26 @@
 
         <form id="addPaperForm" class="p-6 space-y-4">
             <div>
-                <label for="paperName" class="block text-sm font-medium text-gray-700 mb-2">Paper Name</label>
-                <input type="text" id="paperName" name="paperName" required
-                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                       placeholder="e.g., Paper 1, Paper 2">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Subject *</label>
+                <input type="hidden" id="subjectId" name="subjectId" required>
+                <div class="flex items-center">
+                    <button type="button" onclick="openSubjectSelector()" id="subjectButton"
+                            class="w-full text-left px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white">
+                        <span id="subjectButtonText">Select Subject</span>
+                    </button>
+                    <button type="button" onclick="clearSubjectSelection()" id="clearSubjectButton" class="ml-2 hidden text-gray-500 hover:text-gray-700">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <!-- Display auto-generated paper code preview -->
+                <div id="paperCodePreview" class="mt-2 text-sm text-gray-500 hidden">
+                    Paper code will be: <span id="paperCodePreviewValue" class="font-medium"></span>
+                </div>
             </div>
 
-            <div>
-                <label for="paperCode" class="block text-sm font-medium text-gray-700 mb-2">Paper Code</label>
-                <input type="text" id="paperCode" name="paperCode" required
-                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                       placeholder="e.g., PAPER001, PAPER002">
-            </div>
-
-            <div>
-                <label for="subject" class="block text-sm font-medium text-gray-700 mb-2">Subject</label>
-                <select id="subject" name="subject" required
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white">
-                    <option value="">Select Subject</option>
-                    <!-- Options will be populated dynamically -->
-                </select>
-            </div>
-
-            <div>
-                <label for="teacher" class="block text-sm font-medium text-gray-700 mb-2">Teacher (Optional)</label>
-                <select id="teacher" name="teacher"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white">
-                    <option value="">Select Teacher</option>
-                    <!-- Options will be populated dynamically -->
-                </select>
-            </div>
+            <!-- Removed Teacher selection as it's now handled at the class level -->
 
             <div class="flex justify-end gap-3 pt-4">
                 <button type="button" onclick="closeAddPaperModal()" 
@@ -252,33 +264,33 @@
         <form id="editPaperForm" class="p-6 space-y-4">
             <input type="hidden" id="editPaperId" name="paperId">
             <div>
-                <label for="editPaperName" class="block text-sm font-medium text-gray-700 mb-2">Paper Name</label>
-                <input type="text" id="editPaperName" name="paperName" required
-                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Subject *</label>
+                <input type="hidden" id="editSubjectId" name="subjectId" required>
+                <div class="flex items-center">
+                    <button type="button" onclick="openSubjectSelector('edit')" id="editSubjectButton"
+                            class="w-full text-left px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white">
+                        <span id="editSubjectButtonText">Select Subject</span>
+                    </button>
+                    <button type="button" onclick="clearSubjectSelection('edit')" id="editClearSubjectButton" class="ml-2 hidden text-gray-500 hover:text-gray-700">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
 
+            <!-- Display current paper code as read-only information -->
             <div>
-                <label for="editPaperCode" class="block text-sm font-medium text-gray-700 mb-2">Paper Code</label>
-                <input type="text" id="editPaperCode" name="paperCode" required
-                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Paper Code</label>
+                <input type="text" id="editPaperCode" name="code" readonly
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500"
+                       placeholder="Auto-generated">
+                <p class="mt-1 text-xs text-gray-500">Paper code is auto-generated and cannot be changed</p>
             </div>
 
-            <div>
-                <label for="editSubject" class="block text-sm font-medium text-gray-700 mb-2">Subject</label>
-                <select id="editSubject" name="subject" required
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white">
-                    <option value="">Select Subject</option>
-                    <!-- Options will be populated dynamically -->
-                </select>
-            </div>
-
-            <div>
-                <label for="editTeacher" class="block text-sm font-medium text-gray-700 mb-2">Teacher (Optional)</label>
-                <select id="editTeacher" name="teacher"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white">
-                    <option value="">Select Teacher</option>
-                    <!-- Options will be populated dynamically -->
-                </select>
+            <div class="flex items-center">
+                <input type="checkbox" id="editIsActive" name="isActive" class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded">
+                <label for="editIsActive" class="ml-2 block text-sm text-gray-900">Active</label>
             </div>
 
             <div class="flex justify-end gap-3 pt-4">
@@ -295,13 +307,57 @@
     </div>
 </div>
 
+<!-- Subject Selector Modal -->
+<div id="subjectSelectorModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+        <div class="flex justify-between items-center p-6 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">Select Subject</h3>
+            <button onclick="closeSubjectSelector()" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="p-6 flex-1 overflow-y-auto">
+            <div class="relative mb-4">
+                <input type="text" id="subjectSearch" placeholder="Search subjects..." 
+                       class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+            </div>
+
+            <div id="subjectList" class="space-y-3">
+                <!-- Subjects will be loaded here dynamically -->
+            </div>
+        </div>
+
+        <div class="p-6 border-t border-gray-200 flex justify-end">
+            <button onclick="closeSubjectSelector()" 
+                    class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors duration-200">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
+    // Global variables to track current mode (add/edit) and selections
+    let currentMode = 'add';
+    let selectedSubject = null;
+    let selectedTeacher = null;
+
     // Modal functionality
     function openAddPaperModal() {
+        currentMode = 'add';
+        selectedSubject = null;
+        selectedTeacher = null;
+        updateSubjectButtonText();
+        updateTeacherButtonText();
+        updatePaperCodePreview(); // Update the preview when opening the modal
         document.getElementById('addPaperModal').classList.remove('hidden');
         document.body.style.overflow = 'hidden';
-        loadSubjects();
-        loadTeachers();
     }
 
     function closeAddPaperModal() {
@@ -316,15 +372,23 @@
             .then(response => response.json())
             .then(data => {
                 document.getElementById('editPaperId').value = data.id;
-                document.getElementById('editPaperName').value = data.name;
                 document.getElementById('editPaperCode').value = data.code;
+                document.getElementById('editIsActive').checked = data.is_active;
                 
+                // Set selected subject and teacher
+                if (data.subject_id) {
+                    selectedSubject = { id: data.subject_id, name: data.subject ? data.subject.name : '' };
+                    updateSubjectButtonText('edit');
+                }
+                
+                if (data.teacher_id) {
+                    selectedTeacher = { id: data.teacher_id, name: data.teacher ? (data.teacher.first_name + ' ' + data.teacher.last_name) : '' };
+                    updateTeacherButtonText('edit');
+                }
+                
+                currentMode = 'edit';
                 document.getElementById('editPaperModal').classList.remove('hidden');
                 document.body.style.overflow = 'hidden';
-                
-                // Load dropdowns and set selected values
-                loadSubjectsForEdit(data.subject_id);
-                loadTeachersForEdit(data.teacher_id);
             })
             .catch(error => {
                 console.error('Error loading paper:', error);
@@ -338,89 +402,144 @@
         document.getElementById('editPaperForm').reset();
     }
 
-    // Load subjects for dropdowns
-    async function loadSubjects() {
+    // Subject and Teacher Selector Modals
+    function openSubjectSelector(mode = 'add') {
+        currentMode = mode;
+        document.getElementById('subjectSelectorModal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        loadSubjectsForSelector();
+    }
+
+    function closeSubjectSelector() {
+        document.getElementById('subjectSelectorModal').classList.add('hidden');
+        document.body.style.overflow = 'auto';
+    }
+
+    // Removed teacher selector functions as teacher assignment is now handled at the class level
+
+    // Selection functions
+    function selectSubject(subject) {
+        selectedSubject = subject;
+        updateSubjectButtonText();
+        updatePaperCodePreview();
+        closeSubjectSelector();
+    }
+
+    function clearSubjectSelection(mode = 'add') {
+        selectedSubject = null;
+        updateSubjectButtonText(mode);
+        updatePaperCodePreview();
+        
+        const clearButton = mode === 'edit' ? document.getElementById('editClearSubjectButton') : document.getElementById('clearSubjectButton');
+        clearButton.classList.add('hidden');
+    }
+
+    // Function to update the paper code preview
+    function updatePaperCodePreview() {
+        const previewDiv = document.getElementById('paperCodePreview');
+        const previewValue = document.getElementById('paperCodePreviewValue');
+        
+        if (selectedSubject) {
+            // In a real implementation, we would make an API call to get the next paper number
+            // For now, we'll show a placeholder
+            previewDiv.classList.remove('hidden');
+            previewValue.textContent = selectedSubject.name.substring(0, 4).toUpperCase() + '-1';
+        } else {
+            previewDiv.classList.add('hidden');
+        }
+    }
+
+    function updateSubjectButtonText(mode = currentMode) {
+        const buttonText = mode === 'edit' ? document.getElementById('editSubjectButtonText') : document.getElementById('subjectButtonText');
+        const clearButton = mode === 'edit' ? document.getElementById('editClearSubjectButton') : document.getElementById('clearSubjectButton');
+        const hiddenInput = mode === 'edit' ? document.getElementById('editSubjectId') : document.getElementById('subjectId');
+        
+        if (selectedSubject) {
+            buttonText.textContent = selectedSubject.name;
+            clearButton.classList.remove('hidden');
+            hiddenInput.value = selectedSubject.id;
+        } else {
+            buttonText.textContent = 'Select Subject';
+            clearButton.classList.add('hidden');
+            hiddenInput.value = '';
+        }
+    }
+
+    // Load data for selectors
+    async function loadSubjectsForSelector() {
+        const subjectList = document.getElementById('subjectList');
+        
+        // Show skeleton loader while fetching data
+        subjectList.innerHTML = `
+            <div class="animate-pulse space-y-3">
+                <div class="h-16 bg-gray-200 rounded-lg"></div>
+                <div class="h-16 bg-gray-200 rounded-lg"></div>
+                <div class="h-16 bg-gray-200 rounded-lg"></div>
+                <div class="h-16 bg-gray-200 rounded-lg"></div>
+                <div class="h-16 bg-gray-200 rounded-lg"></div>
+            </div>
+        `;
+        
         try {
+            // Add a small delay to better demonstrate the loading effect
+            await new Promise(resolve => setTimeout(resolve, 300));
+            
             const response = await fetch('/api/subjects');
             const data = await response.json();
             
-            const subjectSelect = document.getElementById('subject');
-            subjectSelect.innerHTML = '<option value="">Select Subject</option>';
+            subjectList.innerHTML = '';
             
-            data.subjects.forEach(subject => {
-                const option = document.createElement('option');
-                option.value = subject.id;
-                option.textContent = subject.name;
-                subjectSelect.appendChild(option);
-            });
+            // Check if subjects data exists
+            if (data && data.subjects) {
+                data.subjects.forEach(subject => {
+                    const subjectElement = document.createElement('div');
+                    subjectElement.className = 'p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors';
+                    subjectElement.innerHTML = `
+                        <div class="font-medium text-gray-900">${subject.name}</div>
+                        <div class="text-sm text-gray-500">${subject.code}</div>
+                    `;
+                    subjectElement.onclick = () => selectSubject({ id: subject.id, name: subject.name });
+                    subjectList.appendChild(subjectElement);
+                });
+                
+                // Show message if no subjects found
+                if (data.subjects.length === 0) {
+                    subjectList.innerHTML = '<div class="text-center text-gray-500 py-4">No subjects available</div>';
+                }
+            } else {
+                subjectList.innerHTML = '<div class="text-center text-gray-500 py-4">No subjects available</div>';
+            }
+            
+            // Add search functionality
+            const searchInput = document.getElementById('subjectSearch');
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    const searchTerm = this.value.toLowerCase();
+                    const subjects = subjectList.children;
+                    
+                    for (let i = 0; i < subjects.length; i++) {
+                        // Skip skeleton loaders
+                        if (subjects[i].classList.contains('animate-pulse')) continue;
+                        
+                        const subjectName = subjects[i].children[0].textContent.toLowerCase();
+                        const subjectCode = subjects[i].children[1].textContent.toLowerCase();
+                        
+                        if (subjectName.includes(searchTerm) || subjectCode.includes(searchTerm)) {
+                            subjects[i].style.display = '';
+                        } else {
+                            subjects[i].style.display = 'none';
+                        }
+                    }
+                });
+            }
         } catch (error) {
             console.error('Error loading subjects:', error);
+            // Show error message in the modal
+            subjectList.innerHTML = '<div class="text-center text-red-500 py-4">Failed to load subjects</div>';
         }
     }
 
-    async function loadSubjectsForEdit(selectedSubjectId) {
-        try {
-            const response = await fetch('/api/subjects');
-            const data = await response.json();
-            
-            const subjectSelect = document.getElementById('editSubject');
-            subjectSelect.innerHTML = '<option value="">Select Subject</option>';
-            
-            data.subjects.forEach(subject => {
-                const option = document.createElement('option');
-                option.value = subject.id;
-                option.textContent = subject.name;
-                if (subject.id === selectedSubjectId) {
-                    option.selected = true;
-                }
-                subjectSelect.appendChild(option);
-            });
-        } catch (error) {
-            console.error('Error loading subjects:', error);
-        }
-    }
-
-    // Load teachers for dropdowns
-    async function loadTeachers() {
-        try {
-            const response = await fetch('/api/teachers');
-            const data = await response.json();
-            
-            const teacherSelect = document.getElementById('teacher');
-            teacherSelect.innerHTML = '<option value="">Select Teacher</option>';
-            
-            data.teachers.forEach(teacher => {
-                const option = document.createElement('option');
-                option.value = teacher.id;
-                option.textContent = `${teacher.first_name} ${teacher.last_name}`;
-                teacherSelect.appendChild(option);
-            });
-        } catch (error) {
-            console.error('Error loading teachers:', error);
-        }
-    }
-
-    async function loadTeachersForEdit(selectedTeacherId) {
-        try {
-            const response = await fetch('/api/teachers');
-            const data = await response.json();
-            
-            const teacherSelect = document.getElementById('editTeacher');
-            teacherSelect.innerHTML = '<option value="">Select Teacher</option>';
-            
-            data.teachers.forEach(teacher => {
-                const option = document.createElement('option');
-                option.value = teacher.id;
-                option.textContent = `${teacher.first_name} ${teacher.last_name}`;
-                if (teacher.id === selectedTeacherId) {
-                    option.selected = true;
-                }
-                teacherSelect.appendChild(option);
-            });
-        } catch (error) {
-            console.error('Error loading teachers:', error);
-        }
-    }
+    // Removed loadTeachersForSelector function as teacher assignment is now handled at the class level
 
     // Utility function to set button loading state
     function setButtonLoading(button, loading, originalText) {
@@ -441,12 +560,9 @@
         const originalText = submitBtn.innerHTML;
         setButtonLoading(submitBtn, true, originalText);
 
-        const formData = new FormData(this);
         const data = {
-            name: formData.get('paperName'),
-            code: formData.get('paperCode'),
-            subject_id: formData.get('subject'),
-            teacher_id: formData.get('teacher') || null
+            subject_id: document.getElementById('subjectId').value
+            // Teacher assignment is now handled at the class level
         };
 
         try {
@@ -482,12 +598,10 @@
         setButtonLoading(submitBtn, true, originalText);
 
         const paperId = document.getElementById('editPaperId').value;
-        const formData = new FormData(this);
         const data = {
-            name: formData.get('paperName'),
-            code: formData.get('paperCode'),
-            subject_id: formData.get('subject'),
-            teacher_id: formData.get('teacher') || null
+            subject_id: document.getElementById('editSubjectId').value
+            // Teacher assignment is now handled at the class level
+            // Paper code is auto-generated and should not be changed
         };
 
         try {
@@ -516,7 +630,7 @@
 
     // Delete paper
     async function deletePaper(paperId) {
-        if (!confirm('Are you sure you want to delete this paper?')) {
+        if (!confirm('Are you sure you want to delete this paper? This action cannot be undone.')) {
             return;
         }
 
@@ -549,5 +663,46 @@
             closeEditPaperModal();
         }
     });
+
+    document.getElementById('subjectSelectorModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeSubjectSelector();
+        }
+    });
+
+    // Removed teacher selector modal click handler as teacher assignment is now handled at the class level
+
+    // Search and filter functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('paperSearch');
+        const statusFilter = document.getElementById('statusFilter');
+        const subjectFilter = document.getElementById('subjectFilter');
+        const tableRows = document.querySelectorAll('.paper-row');
+
+        function filterPapers() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const statusValue = statusFilter.value;
+            const subjectValue = subjectFilter.value;
+
+            tableRows.forEach(row => {
+                const code = row.getAttribute('data-code').toLowerCase();
+                const subject = row.getAttribute('data-subject').toLowerCase();
+                const status = row.getAttribute('data-status');
+
+                const matchesSearch = code.includes(searchTerm) || subject.includes(searchTerm);
+                const matchesStatus = statusValue === '' || status === statusValue;
+                const matchesSubject = subjectValue === '' || subject.includes(subjectValue.toLowerCase());
+
+                if (matchesSearch && matchesStatus && matchesSubject) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        searchInput.addEventListener('input', filterPapers);
+        statusFilter.addEventListener('change', filterPapers);
+        subjectFilter.addEventListener('change', filterPapers);
+    });
 </script>
-{{end}}

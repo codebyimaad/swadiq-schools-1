@@ -269,13 +269,24 @@ CREATE TABLE IF NOT EXISTS payment_allocations (
 CREATE TABLE IF NOT EXISTS papers (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     subject_id UUID NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
-    teacher_id UUID REFERENCES users(id),
-    name VARCHAR(100) NOT NULL,
     code VARCHAR(20) UNIQUE NOT NULL,
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     deleted_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Class Papers table (relationship between classes, papers, and teachers)
+CREATE TABLE IF NOT EXISTS class_papers (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    class_id UUID NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+    paper_id UUID NOT NULL REFERENCES papers(id) ON DELETE CASCADE,
+    teacher_id UUID REFERENCES users(id),
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    UNIQUE (class_id, paper_id)
 );
 
 -- Grades table

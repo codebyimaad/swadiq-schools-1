@@ -1,0 +1,235 @@
+<div class="min-h-screen bg-gray-50">
+    <!-- Header -->
+    <div class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-6">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Class Papers Management</h1>
+                    <p class="mt-1 text-sm text-gray-500">Manage paper assignments for classes</p>
+                </div>
+                <button onclick="openAddClassPaperModal()" 
+                        class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                    </svg>
+                    Assign Paper to Class
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Class Selector -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Select Class</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {{range .classes}}
+                <div onclick="loadClassPapers('{{.ID}}')" 
+                     class="p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                    <div class="font-medium text-gray-900">{{.Name}}</div>
+                    {{if .Teacher}}
+                        <div class="text-sm text-gray-500">Teacher: {{.Teacher.FirstName}} {{.Teacher.LastName}}</div>
+                    {{else}}
+                        <div class="text-sm text-gray-500">No teacher assigned</div>
+                    {{end}}
+                </div>
+                {{end}}
+            </div>
+        </div>
+
+        <!-- Class Papers Table -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-lg font-semibold text-gray-900">Class Papers</h2>
+                    <div class="flex items-center gap-3">
+                        <div class="relative">
+                            <input type="text" placeholder="Search papers..." 
+                                   class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                            <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paper Code</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teacher</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200" id="classPapersTable">
+                        <tr>
+                            <td colspan="4" class="px-4 py-8 text-center text-gray-500">
+                                <div class="flex flex-col items-center">
+                                    <svg class="w-12 h-12 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+                                    </svg>
+                                    <p class="text-lg font-medium text-gray-900 mb-1">Select a class to view papers</p>
+                                    <p class="text-sm text-gray-500">Choose a class from above to see assigned papers</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Class Paper Modal -->
+<div id="addClassPaperModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center p-6 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">Assign Paper to Class</h3>
+            <button onclick="closeAddClassPaperModal()" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <form id="addClassPaperForm" class="p-6 space-y-4">
+            <input type="hidden" id="classId" name="classId">
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Class</label>
+                <div id="selectedClass" class="px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-900">
+                    No class selected
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Paper</label>
+                <select id="paperId" name="paperId" required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                    <option value="">Select a paper</option>
+                    {{range .papers}}
+                        <option value="{{.ID}}">{{.Code}} - {{if .Subject}}{{.Subject.Name}}{{end}}</option>
+                    {{end}}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Teacher (Optional)</label>
+                <select id="teacherId" name="teacherId"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                    <option value="">No teacher assigned</option>
+                    {{range .teachers}}
+                        <option value="{{.ID}}">{{.FirstName}} {{.LastName}}</option>
+                    {{end}}
+                </select>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-4">
+                <button type="button" onclick="closeAddClassPaperModal()" 
+                        class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors duration-200">
+                    Cancel
+                </button>
+                <button type="submit" 
+                        class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors duration-200">
+                    Assign Paper
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    let selectedClassId = null;
+
+    // Load class papers
+    async function loadClassPapers(classId) {
+        selectedClassId = classId;
+        
+        // Highlight selected class
+        document.querySelectorAll('.grid div').forEach(el => {
+            el.classList.remove('bg-blue-50', 'border-blue-500');
+        });
+        event.target.closest('div').classList.add('bg-blue-50', 'border-blue-500');
+        
+        // Update form
+        document.getElementById('classId').value = classId;
+        const className = event.target.closest('div').querySelector('.font-medium').textContent;
+        document.getElementById('selectedClass').textContent = className;
+        
+        // TODO: Load class papers from API
+        const tableBody = document.getElementById('classPapersTable');
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="4" class="px-4 py-8 text-center text-gray-500">
+                    <div class="flex flex-col items-center">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mb-4"></div>
+                        <p class="text-lg font-medium text-gray-900 mb-1">Loading papers...</p>
+                    </div>
+                </td>
+            </tr>
+        `;
+        
+        // Simulate API call
+        setTimeout(() => {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="4" class="px-4 py-8 text-center text-gray-500">
+                        <div class="flex flex-col items-center">
+                            <svg class="w-12 h-12 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+                            </svg>
+                            <p class="text-lg font-medium text-gray-900 mb-1">No papers assigned to this class</p>
+                            <p class="text-sm text-gray-500">Click "Assign Paper to Class" to add papers</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }, 1000);
+    }
+
+    // Modal functionality
+    function openAddClassPaperModal() {
+        if (!selectedClassId) {
+            alert('Please select a class first');
+            return;
+        }
+        document.getElementById('addClassPaperModal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeAddClassPaperModal() {
+        document.getElementById('addClassPaperModal').classList.add('hidden');
+        document.body.style.overflow = 'auto';
+        document.getElementById('addClassPaperForm').reset();
+    }
+
+    // Form submission
+    document.getElementById('addClassPaperForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const classId = document.getElementById('classId').value;
+        const paperId = document.getElementById('paperId').value;
+        const teacherId = document.getElementById('teacherId').value || null;
+        
+        if (!classId || !paperId) {
+            alert('Please select both class and paper');
+            return;
+        }
+        
+        // TODO: Submit to API
+        alert('Paper assigned to class successfully!');
+        closeAddClassPaperModal();
+        loadClassPapers(classId);
+    });
+
+    // Close modal when clicking outside
+    document.getElementById('addClassPaperModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeAddClassPaperModal();
+        }
+    });
+</script>

@@ -7,6 +7,7 @@ import (
 	"swadiq-schools/app/routes/attendance"
 	"swadiq-schools/app/routes/auth"
 	"swadiq-schools/app/routes/classes"
+	"swadiq-schools/app/routes/classpapers"
 	"swadiq-schools/app/routes/dashboard"
 	"swadiq-schools/app/routes/departments"
 	"swadiq-schools/app/routes/fees"
@@ -137,6 +138,9 @@ func main() {
 
 	// Setup papers routes
 	papers.SetupPapersRoutes(app)
+
+	// Setup class papers routes
+	classpapers.SetupClassPapersRoutes(app)
 
 	// Setup academic routes
 	academic.RegisterRoutes(app, config.GetDB())

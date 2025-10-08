@@ -14,6 +14,7 @@ swadiq-schools
 
 # Go workspace file
 go.work
+tmp/
 
 # Environment variables
 .env
@@ -25,3 +26,4 @@ go.work
 # OS files
 .DS_Store
 Thumbs.db
+
