@@ -20,6 +20,7 @@ func SetupSubjectsRoutes(app *fiber.App) {
 	api := app.Group("/api/subjects")
 	api.Use(auth.AuthMiddleware)
 	api.Get("/", GetSubjectsAPI)
+	api.Get("/search", SearchSubjectsAPI)
 	api.Get("/:id", GetSubjectAPI)
 	api.Post("/", CreateSubjectAPI)
 	api.Put("/:id", UpdateSubjectAPI)

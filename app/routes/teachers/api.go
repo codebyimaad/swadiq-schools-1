@@ -20,6 +20,45 @@ func GetTeachersAPI(c *fiber.Ctx) error {
 	})
 }
 
+func GetTeacherCountsAPI(c *fiber.Ctx) error {
+	counts, err := database.GetTeacherCountsByRole(config.GetDB())
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch teacher counts"})
+	}
+
+	return c.JSON(counts)
+}
+
+func GetTeacherStatsAPI(c *fiber.Ctx) error {
+	db := config.GetDB()
+	
+	// Get teacher counts by role
+	roleCounts, err := database.GetTeacherCountsByRole(db)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch teacher counts"})
+	}
+
+	// Get total teachers count
+	totalQuery := `SELECT COUNT(DISTINCT u.id) FROM users u 
+		INNER JOIN user_roles ur ON u.id = ur.user_id
+		INNER JOIN roles r ON ur.role_id = r.id
+		WHERE r.name IN ('class_teacher', 'subject_teacher', 'head_teacher', 'admin') 
+		AND u.is_active = true`
+	
+	var totalTeachers int
+	err = db.QueryRow(totalQuery).Scan(&totalTeachers)
+	if err != nil {
+		totalTeachers = 0
+	}
+
+	return c.JSON(fiber.Map{
+		"total_teachers": totalTeachers,
+		"active_teachers": totalTeachers,
+		"class_teachers": roleCounts["class_teacher"],
+		"subject_teachers": roleCounts["subject_teacher"],
+	})
+}
+
 func CreateTeacherAPI(c *fiber.Ctx) error {
 	type CreateTeacherRequest struct {
 		FirstName string `json:"first_name"`
@@ -79,7 +118,7 @@ func SearchTeachersAPI(c *fiber.Ctx) error {
 	limit := c.QueryInt("limit", 10)
 	offset := c.QueryInt("offset", 0)
 
-	teachers, total, err := SearchTeachersWithPagination(config.GetDB(), query, limit, offset)
+	teachers, total, err := database.SearchTeachersWithPagination(config.GetDB(), query, limit, offset)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"error":   "Failed to search teachers",
@@ -104,7 +143,7 @@ func GetTeacherAPI(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Teacher ID is required"})
 	}
 
-	teacher, err := GetTeacherByID(config.GetDB(), teacherID)
+	teacher, err := database.GetTeacherByID(config.GetDB(), teacherID)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Teacher not found"})
 	}
@@ -137,7 +176,7 @@ func UpdateTeacherAPI(c *fiber.Ctx) error {
 	}
 
 	// Check if teacher exists
-	existingTeacher, err := GetTeacherByID(config.GetDB(), teacherID)
+	existingTeacher, err := database.GetTeacherByID(config.GetDB(), teacherID)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Teacher not found"})
 	}

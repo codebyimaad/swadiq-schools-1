@@ -20,6 +20,8 @@ func SetupTeachersRoutes(app *fiber.App) {
 	api := app.Group("/api/teachers")
 	api.Use(auth.AuthMiddleware)
 	api.Get("/", GetTeachersAPI)
+	api.Get("/counts", GetTeacherCountsAPI)
+	api.Get("/stats", GetTeacherStatsAPI)
 	api.Get("/search", SearchTeachersAPI)
 	api.Post("/", CreateTeacherAPI)
 	api.Get("/:id", GetTeacherAPI)

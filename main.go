@@ -156,7 +156,19 @@ func main() {
 	classesAPI := app.Group("/api/classes")
 	classesAPI.Use(auth.AuthMiddleware)
 	classesAPI.Get("/", classes.GetClassesAPI)
+	classesAPI.Get("/stats", classes.GetClassesStatsAPI)
+	classesAPI.Get("/table", classes.GetClassesTableAPI)
 	classesAPI.Post("/", classes.CreateClassAPI)
+	classesAPI.Get("/:id/subjects", classes.GetClassSubjectsAPI)
+	classesAPI.Post("/:id/subjects", classes.AddClassSubjectsAPI)
+	classesAPI.Delete("/:id/subjects/:subjectId", classes.RemoveClassSubjectAPI)
+	classesAPI.Get("/:id/papers", classes.GetClassPapersAPI)
+	classesAPI.Post("/:id/papers", classes.AssignPapersToClassAPI)
+	classesAPI.Get("/:id/subjects/:subjectId/papers", classes.GetSubjectPapersForClassAPI)
+	classesAPI.Get("/:id", classes.GetClassAPI)
+	classesAPI.Get("/:id/details", classes.GetClassDetailsAPI)
+	classesAPI.Put("/:id", classes.UpdateClassAPI)
+	classesAPI.Delete("/:id", classes.DeleteClassAPI)
 
 	// Setup roles API routes
 	rolesAPI := app.Group("/api/roles")
@@ -168,10 +180,16 @@ func main() {
 	papersAPI := app.Group("/api/papers")
 	papersAPI.Use(auth.AuthMiddleware)
 	papersAPI.Get("/", papers.GetPapersAPI)
+	papersAPI.Get("/by-subject/:subjectId", papers.GetPapersBySubjectAPI)
 	papersAPI.Get("/:id", papers.GetPaperAPI)
 	papersAPI.Post("/", papers.CreatePaperAPI)
 	papersAPI.Put("/:id", papers.UpdatePaperAPI)
 	papersAPI.Delete("/:id", papers.DeletePaperAPI)
+
+	// Setup subjects API routes
+	subjectsAPI := app.Group("/api/subjects")
+	subjectsAPI.Use(auth.AuthMiddleware)
+	subjectsAPI.Get("/", subjects.GetSubjectsAPI)
 
 	// Catch-all route for 404 errors (must be last)
 	app.Use("*", func(c *fiber.Ctx) error {

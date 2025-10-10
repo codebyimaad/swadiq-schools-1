@@ -25,18 +25,52 @@
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
         <h2 class="text-lg font-semibold text-gray-900 mb-4">Department Overview</h2>
         <div id="departmentOverview" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <!-- Department cards will be populated here -->
+            <!-- Skeleton loading for departments -->
+            <div class="animate-pulse">
+                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div class="h-5 bg-gray-200 rounded w-3/4 mb-2"></div>
+                    <div class="h-4 bg-gray-200 rounded w-1/2 mb-3"></div>
+                    <div class="h-3 bg-gray-200 rounded w-full mb-2"></div>
+                    <div class="h-3 bg-gray-200 rounded w-2/3"></div>
+                </div>
+            </div>
+            <div class="animate-pulse">
+                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div class="h-5 bg-gray-200 rounded w-3/4 mb-2"></div>
+                    <div class="h-4 bg-gray-200 rounded w-1/2 mb-3"></div>
+                    <div class="h-3 bg-gray-200 rounded w-full mb-2"></div>
+                    <div class="h-3 bg-gray-200 rounded w-2/3"></div>
+                </div>
+            </div>
+            <div class="animate-pulse">
+                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div class="h-5 bg-gray-200 rounded w-3/4 mb-2"></div>
+                    <div class="h-4 bg-gray-200 rounded w-1/2 mb-3"></div>
+                    <div class="h-3 bg-gray-200 rounded w-full mb-2"></div>
+                    <div class="h-3 bg-gray-200 rounded w-2/3"></div>
+                </div>
+            </div>
+            <div class="animate-pulse">
+                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div class="h-5 bg-gray-200 rounded w-3/4 mb-2"></div>
+                    <div class="h-4 bg-gray-200 rounded w-1/2 mb-3"></div>
+                    <div class="h-3 bg-gray-200 rounded w-full mb-2"></div>
+                    <div class="h-3 bg-gray-200 rounded w-2/3"></div>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- Stats Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6" id="statsCards">
         <!-- Total Teachers -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Total Teachers</p>
-                    <p class="text-2xl font-bold text-gray-900 mt-1">{{if .teachers}}{{len .teachers}}{{else}}0{{end}}</p>
+                    <p id="totalTeachersCount" class="text-2xl font-bold text-gray-900 mt-1">
+                        <div class="h-8 bg-gray-200 rounded animate-pulse w-12"></div>
+                    </p>
                 </div>
                 <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                     <i class="fas fa-chalkboard-teacher text-blue-600"></i>
@@ -49,7 +83,9 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Active Teachers</p>
-                    <p class="text-2xl font-bold text-gray-900 mt-1">{{if .teachers}}{{len .teachers}}{{else}}0{{end}}</p>
+                    <p id="activeTeachersCount" class="text-2xl font-bold text-gray-900 mt-1">
+                        <div class="h-8 bg-gray-200 rounded animate-pulse w-12"></div>
+                    </p>
                 </div>
                 <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
                     <i class="fas fa-check-circle text-green-600"></i>
@@ -62,7 +98,9 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Class Teachers</p>
-                    <p class="text-2xl font-bold text-gray-900 mt-1">15</p>
+                    <p id="classTeachersCount" class="text-2xl font-bold text-gray-900 mt-1">
+                        <div class="h-8 bg-gray-200 rounded animate-pulse w-12"></div>
+                    </p>
                 </div>
                 <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
                     <i class="fas fa-school text-purple-600"></i>
@@ -75,7 +113,9 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Subject Teachers</p>
-                    <p class="text-2xl font-bold text-gray-900 mt-1">28</p>
+                    <p id="subjectTeachersCount" class="text-2xl font-bold text-gray-900 mt-1">
+                        <div class="h-8 bg-gray-200 rounded animate-pulse w-12"></div>
+                    </p>
                 </div>
                 <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
                     <i class="fas fa-book text-orange-600"></i>
@@ -133,11 +173,7 @@
             <table class="w-full">
                 <thead class="bg-gray-50 border-b border-gray-200">
                     <tr>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            <input type="checkbox" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
-                        </th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teacher</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee ID</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Classes</th>
@@ -388,6 +424,35 @@ function closeViewModal() {
     document.getElementById('viewTeacherModal').classList.add('hidden');
     document.body.style.overflow = 'auto';
 }
+
+// Function to show classes modal
+function showClassesModal(teacherName, classes, event) {
+    const modal = document.getElementById('classesModal');
+    const title = document.getElementById('classesModalTitle');
+    const classesList = document.getElementById('classesList');
+    
+    title.textContent = `${teacherName}'s Classes`;
+    
+    classesList.innerHTML = '';
+    classes.forEach(cls => {
+        const classDiv = document.createElement('div');
+        classDiv.className = 'py-1 text-sm text-gray-700';
+        classDiv.innerHTML = `<span>${cls.name}</span>`;
+        classesList.appendChild(classDiv);
+    });
+    
+    // Position the modal next to the button using fixed positioning
+    const rect = event.target.getBoundingClientRect();
+    modal.style.left = `${rect.left}px`;
+    modal.style.top = `${rect.bottom + 5}px`;
+    
+    modal.classList.remove('hidden');
+}
+
+// Function to close classes modal
+function closeClassesModal() {
+    document.getElementById('classesModal').classList.add('hidden');
+}
 </script>
 
 <!-- Edit Teacher Modal -->
@@ -575,7 +640,147 @@ function closeViewModal() {
     </div>
 </div>
 
+<!-- Classes Modal -->
+<div id="classesModal" class="fixed z-50 hidden">
+    <div class="bg-white rounded-lg shadow-lg border border-gray-200 p-4 max-w-xs">
+        <div class="flex items-center justify-between mb-3">
+            <h3 id="classesModalTitle" class="text-sm font-semibold text-gray-900">Classes</h3>
+            <button id="closeClassesModalBtn" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times text-xs"></i>
+            </button>
+        </div>
+        <div id="classesList" class="space-y-1">
+            <!-- Classes will be loaded here -->
+        </div>
+    </div>
+</div>
+
 <script>
+// Load teacher stats via API
+function loadTeacherStats() {
+    fetch('/api/teachers/stats')
+        .then(response => response.json())
+        .then(data => {
+            // Replace entire stats cards with actual data
+            const statsCards = document.getElementById('statsCards');
+            statsCards.innerHTML = `
+                <!-- Total Teachers -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Total Teachers</p>
+                            <p class="text-2xl font-bold text-gray-900 mt-1">${data.total_teachers || 0}</p>
+                        </div>
+                        <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-chalkboard-teacher text-blue-600"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Teachers -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Active Teachers</p>
+                            <p class="text-2xl font-bold text-gray-900 mt-1">${data.active_teachers || 0}</p>
+                        </div>
+                        <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-check-circle text-green-600"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Class Teachers -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Class Teachers</p>
+                            <p class="text-2xl font-bold text-gray-900 mt-1">${data.class_teachers || 0}</p>
+                        </div>
+                        <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-school text-purple-600"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Subject Teachers -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Subject Teachers</p>
+                            <p class="text-2xl font-bold text-gray-900 mt-1">${data.subject_teachers || 0}</p>
+                        </div>
+                        <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-book text-orange-600"></i>
+                        </div>
+                    </div>
+                </div>
+            `;
+        })
+        .catch(error => {
+            console.error('Error loading teacher stats:', error);
+            // Show error state
+            const statsCards = document.getElementById('statsCards');
+            statsCards.innerHTML = `
+                <div class="col-span-full text-center py-8">
+                    <i class="fas fa-exclamation-triangle text-red-400 text-3xl mb-3"></i>
+                    <p class="text-red-500">Error loading teacher stats</p>
+                </div>
+            `;
+        });
+}
+
+// Load department overview via separate API
+function loadDepartmentOverview() {
+    fetch('/api/departments/overview')
+        .then(response => response.json())
+        .then(data => {
+            const departmentOverview = document.getElementById('departmentOverview');
+            if (data.departments && data.departments.length > 0) {
+                departmentOverview.innerHTML = data.departments.map(dept => `
+                    <div class="bg-gray-50 rounded-lg p-4 border border-gray-200 hover:border-gray-300 transition-colors duration-200">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="font-semibold text-gray-900">${dept.name}</h3>
+                            <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">${dept.code}</span>
+                        </div>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <span class="text-gray-600">Head:</span>
+                                    <span class="text-gray-900 font-medium">${dept.head_name}</span>
+                                </div>
+                                <div class="text-xs text-blue-600 font-medium">
+                                    ${dept.teacher_count || 0} ${(dept.teacher_count || 0) === 1 ? 'Teacher' : 'Teachers'}
+                                </div>
+                            </div>
+                            <div>
+                                <span class="text-gray-600">Assistant:</span>
+                                <span class="text-gray-900 font-medium">${dept.assistant_name}</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                departmentOverview.innerHTML = `
+                    <div class="col-span-full text-center py-8">
+                        <i class="fas fa-building text-gray-400 text-3xl mb-3"></i>
+                        <p class="text-gray-500">No departments found</p>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading department overview:', error);
+            const departmentOverview = document.getElementById('departmentOverview');
+            departmentOverview.innerHTML = `
+                <div class="col-span-full text-center py-8">
+                    <i class="fas fa-exclamation-triangle text-red-400 text-3xl mb-3"></i>
+                    <p class="text-red-500">Error loading departments</p>
+                </div>
+            `;
+        });
+}
+
 // Loading utility functions
 function setButtonLoading(button, isLoading, originalText = null) {
     if (isLoading) {
@@ -598,9 +803,6 @@ function loadTeachers() {
     tbody.innerHTML = Array(5).fill().map(() => `
         <tr class="animate-pulse">
             <td class="px-4 py-3">
-                <div class="w-4 h-4 bg-gray-200 rounded"></div>
-            </td>
-            <td class="px-4 py-3">
                 <div class="flex items-center">
                     <div class="w-10 h-10 bg-gray-200 rounded-full"></div>
                     <div class="ml-3">
@@ -608,9 +810,6 @@ function loadTeachers() {
                         <div class="h-3 bg-gray-200 rounded w-32"></div>
                     </div>
                 </div>
-            </td>
-            <td class="px-4 py-3">
-                <div class="h-4 bg-gray-200 rounded w-20"></div>
             </td>
             <td class="px-4 py-3">
                 <div class="h-4 bg-gray-200 rounded w-16"></div>
@@ -641,9 +840,6 @@ function loadTeachers() {
                 tbody.innerHTML = data.teachers.map(teacher => `
                     <tr class="hover:bg-gray-50 transition-colors duration-200">
                         <td class="px-4 py-3">
-                            <input type="checkbox" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
-                        </td>
-                        <td class="px-4 py-3">
                             <div class="flex items-center">
                                 <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
                                     <i class="fas fa-user text-white text-sm"></i>
@@ -654,7 +850,6 @@ function loadTeachers() {
                                 </div>
                             </div>
                         </td>
-                        <td class="px-4 py-3 text-sm text-gray-900">EMP-${teacher.id}</td>
                         <td class="px-4 py-3 text-sm text-gray-900">
                             ${teacher.department ? teacher.department.name : 'Not Assigned'}
                         </td>
@@ -666,7 +861,7 @@ function loadTeachers() {
                         </td>
                         <td class="px-4 py-3">
                             ${teacher.classes && teacher.classes.length > 0
-                                ? teacher.classes.map(cls => cls.name).join(', ')
+                                ? `<button class="text-blue-600 hover:text-blue-800 font-medium cursor-pointer whitespace-nowrap" onclick="showClassesModal('${teacher.first_name} ${teacher.last_name}', ${JSON.stringify(teacher.classes).replace(/"/g, '&quot;')}, event)">${teacher.classes.length} ${teacher.classes.length === 1 ? 'Class' : 'Classes'}</button>`
                                 : '<span class="text-xs text-gray-500">No Classes</span>'
                             }
                         </td>
@@ -685,7 +880,11 @@ function loadTeachers() {
                                         data-teacher-id="${teacher.id}"
                                         data-teacher-name="${teacher.first_name} ${teacher.last_name}"
                                         data-teacher-email="${teacher.email}"
-                                        data-teacher-phone="${teacher.phone || ''}">
+                                        data-teacher-phone="${teacher.phone || ''}"
+                                        data-teacher-first-name="${teacher.first_name}"
+                                        data-teacher-last-name="${teacher.last_name}"
+                                        data-teacher-role="${teacher.roles && teacher.roles.length > 0 ? teacher.roles[0].name : ''}"
+                                        data-teacher-department-id="${teacher.department ? teacher.department.id : ''}">
                                     <i class="fas fa-edit text-sm"></i>
                                 </button>
                                 <button class="delete-teacher-btn p-1 text-gray-400 hover:text-red-600 transition-colors duration-200"
@@ -706,10 +905,33 @@ function loadTeachers() {
                         openViewModal(teacher);
                     });
                 });
+                
+                // Add event listeners for edit buttons
+                document.querySelectorAll('.edit-teacher-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const teacherId = this.dataset.teacherId;
+                        const firstName = this.dataset.teacherFirstName;
+                        const lastName = this.dataset.teacherLastName;
+                        const teacherEmail = this.dataset.teacherEmail;
+                        const teacherPhone = this.dataset.teacherPhone;
+                        const teacherRole = this.dataset.teacherRole;
+                        const teacherDepartmentId = this.dataset.teacherDepartmentId;
+                        openEditModal(teacherId, firstName, lastName, teacherEmail, teacherPhone, teacherRole, teacherDepartmentId);
+                    });
+                });
+                
+                // Add event listeners for delete buttons
+                document.querySelectorAll('.delete-teacher-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const teacherId = this.dataset.teacherId;
+                        const teacherName = this.dataset.teacherName;
+                        openDeleteModal(teacherId, teacherName);
+                    });
+                });
             } else {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="8" class="px-4 py-8 text-center text-gray-500">
+                        <td colspan="6" class="px-4 py-8 text-center text-gray-500">
                             <i class="fas fa-chalkboard-teacher text-4xl mb-4 text-gray-300"></i>
                             <p class="text-lg font-medium">No teachers found</p>
                             <p class="text-sm">Add your first teacher to get started</p>
@@ -722,7 +944,7 @@ function loadTeachers() {
             console.error('Error loading teachers:', error);
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="8" class="px-4 py-8 text-center text-red-500">
+                    <td colspan="6" class="px-4 py-8 text-center text-red-500">
                         <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
                         <p class="text-lg font-medium">Error loading teachers</p>
                         <p class="text-sm">Please refresh the page to try again</p>
@@ -732,10 +954,110 @@ function loadTeachers() {
         });
 }
 
+
+// Load roles and departments from API for edit modal
+async function loadEditRoles(currentRole = '') {
+    try {
+        const response = await fetch('/api/roles');
+        const data = await response.json();
+
+        const editRoleSelect = document.getElementById('editRole');
+        editRoleSelect.innerHTML = '<option value="">Select Role</option>';
+
+        data.roles.forEach(role => {
+            if (role.is_active) {
+                const option = document.createElement('option');
+                option.value = role.name;
+                option.textContent = role.name.replace('_', ' ');
+                if (role.name === currentRole) {
+                    option.selected = true;
+                }
+                editRoleSelect.appendChild(option);
+            }
+        });
+    } catch (error) {
+        console.error('Error loading roles for edit:', error);
+    }
+}
+
+async function loadEditDepartments(currentDepartmentId = '') {
+    try {
+        const response = await fetch('/api/departments');
+        const data = await response.json();
+
+        const editDepartmentSelect = document.getElementById('editDepartment');
+        editDepartmentSelect.innerHTML = '<option value="">Select Department</option>';
+
+        data.departments.forEach(department => {
+            const option = document.createElement('option');
+            option.value = department.id;
+            option.textContent = department.name;
+            if (department.id == currentDepartmentId) {
+                option.selected = true;
+            }
+            editDepartmentSelect.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error loading departments for edit:', error);
+    }
+}
+
+// Global modal functions
+function openEditModal(teacherId, firstName, lastName, teacherEmail, teacherPhone, teacherRole, teacherDepartment) {
+    const editTeacherId = document.getElementById('editTeacherId');
+    const editFirstName = document.getElementById('editFirstName');
+    const editLastName = document.getElementById('editLastName');
+    const editEmail = document.getElementById('editEmail');
+    const editPhone = document.getElementById('editPhone');
+    const editRole = document.getElementById('editRole');
+    const editDepartment = document.getElementById('editDepartment');
+    const editTeacherModal = document.getElementById('editTeacherModal');
+
+    editTeacherId.value = teacherId;
+    editFirstName.value = firstName || '';
+    editLastName.value = lastName || '';
+    editEmail.value = teacherEmail || '';
+    editPhone.value = teacherPhone || '';
+
+    // Load roles and departments
+    loadEditRoles(teacherRole);
+    loadEditDepartments(teacherDepartment);
+
+    editTeacherModal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeEditModal() {
+    const editTeacherModal = document.getElementById('editTeacherModal');
+    const editTeacherForm = document.getElementById('editTeacherForm');
+    editTeacherModal.classList.add('hidden');
+    document.body.style.overflow = 'auto';
+    editTeacherForm.reset();
+}
+
+function openDeleteModal(teacherId, teacherName) {
+    const deleteTeacherId = document.getElementById('deleteTeacherId');
+    const deleteTeacherName = document.getElementById('deleteTeacherName');
+    const deleteTeacherModal = document.getElementById('deleteTeacherModal');
+
+    deleteTeacherId.value = teacherId;
+    deleteTeacherName.textContent = teacherName;
+    deleteTeacherModal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeDeleteModal() {
+    const deleteTeacherModal = document.getElementById('deleteTeacherModal');
+    deleteTeacherModal.classList.add('hidden');
+    document.body.style.overflow = 'auto';
+}
+
 // Initialize teachers page functionality
 document.addEventListener('DOMContentLoaded', function() {
-    // Load teachers on page load
+    // Load teachers and stats on page load
     loadTeachers();
+    loadTeacherStats();
+    loadDepartmentOverview();
 
     // Modal elements
     const addTeacherBtn = document.getElementById('addTeacherBtn');
@@ -751,8 +1073,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const closeViewModalBtn = document.getElementById('closeViewModalBtn');
     const closeViewModalBtn2 = document.getElementById('closeViewModalBtn2');
 
-    // Load department overview on page load
-    loadDepartmentOverview();
+
 
     // Modal functionality
     function openModal() {
@@ -775,6 +1096,14 @@ document.addEventListener('DOMContentLoaded', function() {
     closeModalBtn.addEventListener('click', closeModal);
     cancelBtn.addEventListener('click', closeModal);
     
+    // Event listeners for view modal
+    closeViewModalBtn.addEventListener('click', closeViewModal);
+    closeViewModalBtn2.addEventListener('click', closeViewModal);
+    
+    // Event listener for classes modal
+    const closeClassesModalBtn = document.getElementById('closeClassesModalBtn');
+    closeClassesModalBtn.addEventListener('click', closeClassesModal);
+    
     // Remove this duplicate code since event listeners are already defined
 
     // Close modal when clicking outside
@@ -784,10 +1113,32 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // Close view modal when clicking outside
+    viewTeacherModal.addEventListener('click', function(e) {
+        if (e.target === viewTeacherModal) {
+            closeViewModal();
+        }
+    });
+
+    // Close classes modal when clicking anywhere else
+    document.addEventListener('click', function(e) {
+        const classesModal = document.getElementById('classesModal');
+        const closeBtn = document.getElementById('closeClassesModalBtn');
+        if (!classesModal.contains(e.target) && !e.target.closest('button[onclick*="showClassesModal"]')) {
+            closeClassesModal();
+        }
+    });
+
     // Close modal with Escape key
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape' && !addTeacherModal.classList.contains('hidden')) {
             closeModal();
+        }
+        if (e.key === 'Escape' && !viewTeacherModal.classList.contains('hidden')) {
+            closeViewModal();
+        }
+        if (e.key === 'Escape' && !document.getElementById('classesModal').classList.contains('hidden')) {
+            closeClassesModal();
         }
     });
 
@@ -806,54 +1157,82 @@ document.addEventListener('DOMContentLoaded', function() {
     passwordInput.addEventListener('input', validatePasswords);
     confirmPasswordInput.addEventListener('input', validatePasswords);
 
-    // Load department overview
-    async function loadDepartmentOverview() {
+
+
+    // Load departments from API
+    async function loadDepartments() {
         try {
             const response = await fetch('/api/departments');
             const data = await response.json();
 
-            const overviewContainer = document.getElementById('departmentOverview');
-            overviewContainer.innerHTML = '';
+            const departmentSelect = document.getElementById('department');
+            departmentSelect.innerHTML = '<option value="">Select Department</option>';
 
             data.departments.forEach(department => {
-                const card = document.createElement('div');
-                card.className = 'bg-gray-50 rounded-lg p-4 border border-gray-200';
+                const option = document.createElement('option');
+                option.value = department.id;
 
-                const headName = department.head_of_department
-                    ? `${department.head_of_department.first_name} ${department.head_of_department.last_name}`
-                    : 'Not assigned';
+                // Create department display text with head info
+                let displayText = department.name;
+                if (department.head_of_department) {
+                    displayText += ` (Head: ${department.head_of_department.first_name} ${department.head_of_department.last_name})`;
+                }
 
-                const assistantName = department.assistant_head
-                    ? `${department.assistant_head.first_name} ${department.assistant_head.last_name}`
-                    : 'Not assigned';
-
-                card.innerHTML = `
-                    <div class="flex items-center justify-between mb-3">
-                        <h3 class="font-semibold text-gray-900">${department.name}</h3>
-                        <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">${department.code}</span>
-                    </div>
-                    <div class="space-y-2 text-sm">
-                        <div>
-                            <span class="text-gray-600">Head:</span>
-                            <span class="text-gray-900 font-medium">${headName}</span>
-                        </div>
-                        <div>
-                            <span class="text-gray-600">Assistant:</span>
-                            <span class="text-gray-900 font-medium">${assistantName}</span>
-                        </div>
-                        ${department.description ? `<p class="text-xs text-gray-500 mt-2">${department.description}</p>` : ''}
-                    </div>
-                `;
-
-                overviewContainer.appendChild(card);
+                option.textContent = displayText;
+                option.title = `${department.description || ''}\nHead: ${department.head_of_department ? department.head_of_department.first_name + ' ' + department.head_of_department.last_name : 'Not assigned'}\nAssistant: ${department.assistant_head ? department.assistant_head.first_name + ' ' + department.assistant_head.last_name : 'Not assigned'}`;
+                departmentSelect.appendChild(option);
             });
         } catch (error) {
-            console.error('Error loading department overview:', error);
+            console.error('Error loading departments:', error);
         }
     }
 
-    // Load departments from API
-    async function loadDepartments() {
+    // Load roles and departments from API for edit modal
+    async function loadEditRoles(currentRole = '') {
+        try {
+            const response = await fetch('/api/roles');
+            const data = await response.json();
+
+            const editRoleSelect = document.getElementById('editRole');
+            editRoleSelect.innerHTML = '<option value="">Select Role</option>';
+
+            data.roles.forEach(role => {
+                if (role.is_active) {
+                    const option = document.createElement('option');
+                    option.value = role.name;
+                    option.textContent = role.name.replace('_', ' ');
+                    if (role.name === currentRole) {
+                        option.selected = true;
+                    }
+                    editRoleSelect.appendChild(option);
+                }
+            });
+        } catch (error) {
+            console.error('Error loading roles for edit:', error);
+        }
+    }
+
+    async function loadEditDepartments(currentDepartmentId = '') {
+        try {
+            const response = await fetch('/api/departments');
+            const data = await response.json();
+
+            const editDepartmentSelect = document.getElementById('editDepartment');
+            editDepartmentSelect.innerHTML = '<option value="">Select Department</option>';
+
+            data.departments.forEach(department => {
+                const option = document.createElement('option');
+                option.value = department.id;
+                option.textContent = department.name;
+                if (department.id == currentDepartmentId) {
+                    option.selected = true;
+                }
+                editDepartmentSelect.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error loading departments for edit:', error);
+        }
+    }
         try {
             const response = await fetch('/api/departments');
             const data = await response.json();
@@ -1034,66 +1413,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Select all checkbox functionality
-    const selectAllCheckbox = document.querySelector('thead input[type="checkbox"]');
-    const rowCheckboxes = document.querySelectorAll('tbody input[type="checkbox"]');
-
-    if (selectAllCheckbox) {
-        selectAllCheckbox.addEventListener('change', function() {
-            rowCheckboxes.forEach(checkbox => {
-                checkbox.checked = this.checked;
-            });
-        });
-    }
-
-    // Individual checkbox functionality
-    rowCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            const checkedBoxes = document.querySelectorAll('tbody input[type="checkbox"]:checked');
-            selectAllCheckbox.checked = checkedBoxes.length === rowCheckboxes.length;
-            selectAllCheckbox.indeterminate = checkedBoxes.length > 0 && checkedBoxes.length < rowCheckboxes.length;
-        });
-    });
-
     // Edit Teacher Modal functionality
     const editTeacherModal = document.getElementById('editTeacherModal');
     const closeEditModalBtn = document.getElementById('closeEditModalBtn');
     const editCancelBtn = document.getElementById('editCancelBtn');
     const editTeacherForm = document.getElementById('editTeacherForm');
-    const editTeacherId = document.getElementById('editTeacherId');
-    const editFirstName = document.getElementById('editFirstName');
-    const editLastName = document.getElementById('editLastName');
-    const editEmail = document.getElementById('editEmail');
-    const editPhone = document.getElementById('editPhone');
 
-    function openEditModal(teacherId, teacherName, teacherEmail, teacherPhone) {
-        const [firstName, lastName] = teacherName.split(' ');
-        editTeacherId.value = teacherId;
-        editFirstName.value = firstName || '';
-        editLastName.value = lastName || '';
-        editEmail.value = teacherEmail || '';
-        editPhone.value = teacherPhone || '';
-
-        editTeacherModal.classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
-    }
-
-    function closeEditModal() {
-        editTeacherModal.classList.add('hidden');
-        document.body.style.overflow = 'auto';
-        editTeacherForm.reset();
-    }
-
-    // Edit button event listeners
-    document.querySelectorAll('.edit-teacher-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            const teacherId = this.dataset.teacherId;
-            const teacherName = this.dataset.teacherName;
-            const teacherEmail = this.dataset.teacherEmail;
-            const teacherPhone = this.dataset.teacherPhone;
-            openEditModal(teacherId, teacherName, teacherEmail, teacherPhone);
-        });
-    });
+    // Edit button event listeners are added dynamically when teachers are loaded
 
     // Edit modal event listeners
     closeEditModalBtn.addEventListener('click', closeEditModal);
@@ -1110,6 +1436,7 @@ document.addEventListener('DOMContentLoaded', function() {
     editTeacherForm.addEventListener('submit', async function(e) {
         e.preventDefault();
 
+        const editTeacherId = document.getElementById('editTeacherId');
         const submitBtn = this.querySelector('button[type="submit"]');
         setButtonLoading(submitBtn, true, '<i class="fas fa-save mr-2"></i>Update Teacher');
 
@@ -1119,7 +1446,8 @@ document.addEventListener('DOMContentLoaded', function() {
             last_name: formData.get('lastName'),
             email: formData.get('email'),
             role: formData.get('role'),
-            phone: formData.get('phone')
+            phone: formData.get('phone'),
+            department_id: formData.get('department')
         };
 
         try {
@@ -1153,29 +1481,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const closeDeleteModalBtn = document.getElementById('closeDeleteModalBtn');
     const deleteCancelBtn = document.getElementById('deleteCancelBtn');
     const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
-    const deleteTeacherId = document.getElementById('deleteTeacherId');
-    const deleteTeacherName = document.getElementById('deleteTeacherName');
 
-    function openDeleteModal(teacherId, teacherName) {
-        deleteTeacherId.value = teacherId;
-        deleteTeacherName.textContent = teacherName;
-        deleteTeacherModal.classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
-    }
-
-    function closeDeleteModal() {
-        deleteTeacherModal.classList.add('hidden');
-        document.body.style.overflow = 'auto';
-    }
-
-    // Delete button event listeners
-    document.querySelectorAll('.delete-teacher-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            const teacherId = this.dataset.teacherId;
-            const teacherName = this.dataset.teacherName;
-            openDeleteModal(teacherId, teacherName);
-        });
-    });
+    // Delete button event listeners are added dynamically when teachers are loaded
 
     // Delete modal event listeners
     closeDeleteModalBtn.addEventListener('click', closeDeleteModal);
@@ -1190,6 +1497,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Confirm delete button
     confirmDeleteBtn.addEventListener('click', async function() {
+        const deleteTeacherId = document.getElementById('deleteTeacherId');
         setButtonLoading(this, true, '<i class="fas fa-trash mr-2"></i>Delete Teacher');
 
         try {

@@ -20,6 +20,7 @@ func SetupDepartmentsRoutes(app *fiber.App) {
 	api := app.Group("/api/departments")
 	api.Use(auth.AuthMiddleware)
 	api.Get("/", GetDepartmentsAPI)
+	api.Get("/overview", GetDepartmentOverviewAPI)
 	api.Post("/", CreateDepartmentAPI)
 	api.Put("/:id", UpdateDepartmentAPI)
 	api.Delete("/:id", DeleteDepartmentAPI)

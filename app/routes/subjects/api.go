@@ -8,6 +8,28 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+func SearchSubjectsAPI(c *fiber.Ctx) error {
+	query := c.Query("q", "")
+	
+	var subjects []*models.Subject
+	var err error
+	
+	if query == "" {
+		subjects, err = database.GetAllSubjects(config.GetDB())
+	} else {
+		subjects, err = database.SearchSubjects(config.GetDB(), query)
+	}
+	
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to search subjects"})
+	}
+
+	return c.JSON(fiber.Map{
+		"subjects": subjects,
+		"count":    len(subjects),
+	})
+}
+
 func GetSubjectsAPI(c *fiber.Ctx) error {
 	departmentID := c.Query("department_id")
 	

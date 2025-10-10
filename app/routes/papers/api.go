@@ -9,6 +9,20 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+func GetPapersBySubjectAPI(c *fiber.Ctx) error {
+	subjectID := c.Params("subjectId")
+	
+	papers, err := database.GetPapersBySubject(config.GetDB(), subjectID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch papers"})
+	}
+
+	return c.JSON(fiber.Map{
+		"papers": papers,
+		"count":  len(papers),
+	})
+}
+
 func GetPapersAPI(c *fiber.Ctx) error {
 	papers, err := database.GetAllPapers(config.GetDB())
 	if err != nil {

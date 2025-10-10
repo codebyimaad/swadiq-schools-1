@@ -25,11 +25,6 @@ func SetupClassesRoutes(app *fiber.App) {
 	api.Get("/stats", GetClassesStatsAPI) // Get classes statistics
 	api.Get("/table", GetClassesTableAPI) // Get classes formatted for table
 	api.Post("/", CreateClassAPI)
-	api.Get("/:id", GetClassAPI)
-	api.Get("/:id/details", GetClassDetailsAPI) // Get detailed class information
-	api.Put("/:id", UpdateClassAPI)
-	api.Put("/:id/promotion", UpdateClassPromotionSettingsAPI) // Update promotion settings
-	api.Delete("/:id", DeleteClassAPI)
 }
 
 func ClassesPage(c *fiber.Ctx) error {

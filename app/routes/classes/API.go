@@ -318,3 +318,130 @@ func UpdateClassPromotionSettingsAPI(c *fiber.Ctx) error {
 		"promotion_settings": promotion,
 	})
 }
+
+// GetClassSubjectsAPI returns subjects assigned to a class
+func GetClassSubjectsAPI(c *fiber.Ctx) error {
+	classID := c.Params("id")
+	if classID == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Class ID is required"})
+	}
+
+	subjects, err := database.GetClassSubjects(config.GetDB(), classID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch class subjects"})
+	}
+
+	return c.JSON(subjects)
+}
+
+// AddClassSubjectsAPI adds subjects to a class
+func AddClassSubjectsAPI(c *fiber.Ctx) error {
+	classID := c.Params("id")
+	if classID == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Class ID is required"})
+	}
+
+	type AddSubjectsRequest struct {
+		SubjectIDs []string `json:"subject_ids"`
+	}
+
+	var req AddSubjectsRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+
+	if len(req.SubjectIDs) == 0 {
+		return c.Status(400).JSON(fiber.Map{"error": "At least one subject ID is required"})
+	}
+
+	if err := database.AddSubjectsToClass(config.GetDB(), classID, req.SubjectIDs); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to add subjects to class"})
+	}
+
+	return c.JSON(fiber.Map{
+		"success": true,
+		"message": "Subjects added to class successfully",
+	})
+}
+
+// GetClassPapersAPI returns papers assigned to a class
+func GetClassPapersAPI(c *fiber.Ctx) error {
+	classID := c.Params("id")
+	if classID == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Class ID is required"})
+	}
+
+	papers, err := database.GetClassPapers(config.GetDB(), classID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch class papers"})
+	}
+
+	return c.JSON(papers)
+}
+
+// AssignPapersToClassAPI assigns papers to a class for a specific subject
+func AssignPapersToClassAPI(c *fiber.Ctx) error {
+	classID := c.Params("id")
+	if classID == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Class ID is required"})
+	}
+
+	type AssignPapersRequest struct {
+		SubjectID        string                        `json:"subject_id"`
+		PaperAssignments []database.PaperAssignment `json:"paper_assignments"`
+	}
+
+	var req AssignPapersRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+
+	if req.SubjectID == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Subject ID is required"})
+	}
+
+	if err := database.AssignPapersToClass(config.GetDB(), classID, req.SubjectID, req.PaperAssignments); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to assign papers to class"})
+	}
+
+	return c.JSON(fiber.Map{
+		"success": true,
+		"message": "Papers assigned successfully",
+	})
+}
+
+// GetSubjectPapersForClassAPI returns papers for a subject with assignment status
+func GetSubjectPapersForClassAPI(c *fiber.Ctx) error {
+	classID := c.Params("id")
+	subjectID := c.Params("subjectId")
+	
+	if classID == "" || subjectID == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Class ID and Subject ID are required"})
+	}
+
+	papers, err := database.GetSubjectPapersForClass(config.GetDB(), classID, subjectID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch papers"})
+	}
+
+	return c.JSON(papers)
+}
+
+// RemoveClassSubjectAPI removes a subject from a class
+func RemoveClassSubjectAPI(c *fiber.Ctx) error {
+	classID := c.Params("id")
+	subjectID := c.Params("subjectId")
+	
+	if classID == "" || subjectID == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Class ID and Subject ID are required"})
+	}
+
+	if err := database.RemoveSubjectFromClass(config.GetDB(), classID, subjectID); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to remove subject from class"})
+	}
+
+	return c.JSON(fiber.Map{
+		"success": true,
+		"message": "Subject removed from class successfully",
+	})
+}
