@@ -769,7 +769,7 @@
         }
 
         try {
-            const response = await fetch(`/api/classes/{{.classID}}/subjects`, {
+            const response = await fetch("/api/classes/" + classID + "/subjects", {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
@@ -823,7 +823,7 @@
             const allPapers = subjectData.papers || [];
             
             // Load class papers
-            const classResponse = await fetch(`/api/classes/{{.classID}}/papers`);
+            const classResponse = await fetch("/api/classes/" + classID + "/papers");
             classPapersCache = classResponse.ok ? await classResponse.json() : [];
             
             // Load teachers
@@ -982,7 +982,7 @@
         });
         
         try {
-            const response = await fetch(`/api/classes/{{.classID}}/papers`, {
+            const response = await fetch("/api/classes/" + classID + "/papers", {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
@@ -1012,7 +1012,7 @@
         if (!confirm('Are you sure you want to remove this subject from the class?')) return;
 
         try {
-            const response = await fetch(`/api/classes/{{.classID}}/subjects/${subjectId}`, {
+            const response = await fetch("/api/classes/" + classID + "/subjects/" + subjectId, {
                 method: 'DELETE'
             });
 
@@ -1100,7 +1100,7 @@
         
         // Optionally refresh the class details from API to ensure consistency
         try {
-            const response = await fetch(`/api/classes/{{.classID}}/details`, {
+            const response = await fetch("/api/classes/" + classID + "/details", {
                 credentials: 'include'
             });
             if (response.ok) {
@@ -1143,7 +1143,7 @@
             console.log('Submitting data:', data); // Debug log
 
             try {
-                const response = await fetch(`/api/classes/{{.classID}}`, {
+                const response = await fetch("/api/classes/" + classID, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
