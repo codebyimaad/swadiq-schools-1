@@ -613,7 +613,7 @@
     async function loadClassSubjects() {
         console.log('Loading class subjects...');
         try {
-            const response = await fetch(`/api/classes/{{.classID}}/subjects`);
+            const response = await fetch(`/api/classes/{{js .classID}}/subjects`);
             console.log('Subjects response status:', response.status);
             if (response.ok) {
                 const subjects = await response.json();
