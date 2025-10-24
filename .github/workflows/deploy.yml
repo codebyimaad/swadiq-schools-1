@@ -18,7 +18,7 @@ jobs:
         username: ${{ secrets.USERNAME }}
         password: ${{ secrets.PASSWORD }}
         script: |
-          cd /path/to/your/app
+          cd ~/swadiq-schools
           git pull origin main
           docker build -t swadiq-schools .
           docker stop swadiq-app || true
