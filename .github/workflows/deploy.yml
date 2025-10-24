@@ -19,12 +19,11 @@ jobs:
         password: ${{ secrets.PASSWORD }}
         script: |
           cd ~/docker
-          if [ ! -d "swadiq-schools" ]; then
-            git clone https://github.com/ImaadDean/swadiq-schools.git
-          fi
-          cd swadiq-schools
-          git pull origin main
-          docker build -t swadiq-schools .
           docker stop swadiq-app || true
           docker rm swadiq-app || true
+          docker rmi swadiq-schools || true
+          rm -rf swadiq-schools
+          git clone https://github.com/ImaadDean/swadiq-schools.git
+          cd swadiq-schools
+          docker build -t swadiq-schools .
           docker run -d --name swadiq-app -p 8080:8080 swadiq-schools
