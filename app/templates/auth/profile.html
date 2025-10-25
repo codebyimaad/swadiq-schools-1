@@ -1,59 +1,88 @@
 <div class="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-    <div class="bg-white shadow rounded-lg">
-        <div class="px-6 py-4 border-b border-gray-200">
-            <h2 class="text-lg font-medium text-gray-900">Profile Information</h2>
-        </div>
-        
-        <div class="px-6 py-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">First Name</label>
-                    <p class="mt-1 text-sm text-gray-900">{{.FirstName}}</p>
+    <!-- Profile Header with Avatar -->
+    <div class="bg-white shadow rounded-lg mb-6">
+        <div class="px-6 py-5 border-b border-gray-200">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="h-16 w-16 rounded-full bg-blue-500 flex items-center justify-center">
+                        <span class="text-xl font-bold text-white">{{.FirstName | printf "%.1s"}}{{.LastName | printf "%.1s"}}</span>
+                    </div>
                 </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Last Name</label>
-                    <p class="mt-1 text-sm text-gray-900">{{.LastName}}</p>
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Email</label>
-                    <p class="mt-1 text-sm text-gray-900">{{.Email}}</p>
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Role</label>
-                    <span class="mt-1 inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                        {{.Role}}
+                <div class="ml-4">
+                    <h1 class="text-2xl font-bold text-gray-900">{{.FirstName}} {{.LastName}}</h1>
+                    <p class="text-sm text-gray-500">{{.Email}}</p>
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 mt-1">
+                        {{if .Role}}{{.Role}}{{else}}No Role Assigned{{end}}
                     </span>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="mt-8 bg-white shadow rounded-lg">
+    <!-- Profile Information Section -->
+    <div class="bg-white shadow rounded-lg mb-6">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-medium text-gray-900">Profile Information</h2>
+        </div>
+        
+        <div class="px-6 py-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <label class="block text-sm font-medium text-gray-500">First Name</label>
+                    <p class="mt-1 text-lg font-medium text-gray-900">{{.FirstName}}</p>
+                </div>
+                
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <label class="block text-sm font-medium text-gray-500">Last Name</label>
+                    <p class="mt-1 text-lg font-medium text-gray-900">{{.LastName}}</p>
+                </div>
+                
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <label class="block text-sm font-medium text-gray-500">Email Address</label>
+                    <p class="mt-1 text-lg font-medium text-gray-900">{{.Email}}</p>
+                </div>
+                
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <label class="block text-sm font-medium text-gray-500">Role</label>
+                    <p class="mt-1 text-lg font-medium text-gray-900">
+                        {{if .Role}}{{.Role}}{{else}}<span class="text-gray-400">No Role Assigned</span>{{end}}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password Section -->
+    <div class="bg-white shadow rounded-lg">
         <div class="px-6 py-4 border-b border-gray-200">
             <h2 class="text-lg font-medium text-gray-900">Change Password</h2>
         </div>
         
-        <div class="px-6 py-4">
-            <form id="changePasswordForm" class="space-y-4">
+        <div class="px-6 py-6">
+            <form id="changePasswordForm" class="space-y-6 max-w-md">
                 <div>
-                    <label for="currentPassword" class="block text-sm font-medium text-gray-700">Current Password</label>
+                    <label for="currentPassword" class="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
                     <input type="password" id="currentPassword" name="currentPassword" required
-                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
                 </div>
                 
                 <div>
-                    <label for="newPassword" class="block text-sm font-medium text-gray-700">New Password</label>
+                    <label for="newPassword" class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
                     <input type="password" id="newPassword" name="newPassword" required
-                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                    <p class="mt-2 text-sm text-gray-500">Password must be at least 8 characters long</p>
                 </div>
                 
-                <div id="passwordMessage" class="hidden"></div>
+                <div>
+                    <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+                    <input type="password" id="confirmPassword" name="confirmPassword" required
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                </div>
+                
+                <div id="passwordMessage" class="hidden p-4 rounded-lg"></div>
                 
                 <button type="submit" id="changePasswordBtn"
-                    class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50">
+                    class="px-6 py-3 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-colors">
                     Change Password
                 </button>
             </form>
@@ -67,14 +96,34 @@
         
         const btn = document.getElementById('changePasswordBtn');
         const message = document.getElementById('passwordMessage');
+        const newPassword = document.getElementById('newPassword').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+        
+        // Reset previous messages
+        message.classList.add('hidden');
+        
+        // Check if passwords match
+        if (newPassword !== confirmPassword) {
+            message.className = 'bg-red-100 border border-red-400 text-red-700 p-4 rounded-lg';
+            message.textContent = 'New passwords do not match';
+            message.classList.remove('hidden');
+            return;
+        }
+        
+        // Check password length
+        if (newPassword.length < 8) {
+            message.className = 'bg-red-100 border border-red-400 text-red-700 p-4 rounded-lg';
+            message.textContent = 'Password must be at least 8 characters long';
+            message.classList.remove('hidden');
+            return;
+        }
         
         btn.disabled = true;
         btn.textContent = 'Changing...';
-        message.classList.add('hidden');
 
         const formData = {
             current_password: document.getElementById('currentPassword').value,
-            new_password: document.getElementById('newPassword').value
+            new_password: newPassword
         };
 
         try {
@@ -87,16 +136,16 @@
             const data = await response.json();
 
             if (response.ok) {
-                message.className = 'bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded';
+                message.className = 'bg-green-100 border border-green-400 text-green-700 p-4 rounded-lg';
                 message.textContent = 'Password changed successfully';
                 document.getElementById('changePasswordForm').reset();
             } else {
-                message.className = 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded';
+                message.className = 'bg-red-100 border border-red-400 text-red-700 p-4 rounded-lg';
                 message.textContent = data.error || 'Failed to change password';
             }
             message.classList.remove('hidden');
         } catch (error) {
-            message.className = 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded';
+            message.className = 'bg-red-100 border border-red-400 text-red-700 p-4 rounded-lg';
             message.textContent = 'Network error. Please try again.';
             message.classList.remove('hidden');
         } finally {

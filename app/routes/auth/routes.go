@@ -47,6 +47,14 @@ func ShowForgotPasswordPage(c *fiber.Ctx) error {
 
 func ShowProfilePage(c *fiber.Ctx) error {
 	user := c.Locals("user").(*models.User)
+	userRoles := c.Locals("user_roles").([]*models.Role)
+	
+	// Handle case where user has no roles
+	roleName := ""
+	if len(userRoles) > 0 {
+		roleName = userRoles[0].Name
+	}
+	
 	return c.Render("auth/profile", fiber.Map{
 		"Title":       "Profile - Swadiq Schools",
 		"CurrentPage": "profile",
@@ -54,7 +62,7 @@ func ShowProfilePage(c *fiber.Ctx) error {
 		"FirstName":   user.FirstName,
 		"LastName":    user.LastName,
 		"Email":       user.Email,
-		"Role":        user.Roles[0].Name, // Assuming the first role is the primary one
+		"Role":        roleName,
 	})
 }
 
