@@ -1,5 +1,17 @@
+# .dockerignore
 .git
-.github
+.gitignore
 README.md
 .dockerignore
+.github
 Dockerfile
+.docker
+*.md
+.env
+.env.*
+.gitmodules
+.gitattributes
+node_modules
+*.log
+.DS_Store
+Thumbs.db
