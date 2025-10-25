@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "ask": [
+      "Read(!/home/imaad/Desktop/projects/swadiq-schools/**)",
+      "Edit(!/home/imaad/Desktop/projects/swadiq-schools/**)"
+    ],
+    "allow": [
+      "Read(/home/imaad/Desktop/projects/swadiq-schools/**)",
+      "Edit(/home/imaad/Desktop/projects/swadiq-schools/**)"
+    ]
+  },
+  "memoryImport": {},
+  "monitoring": {}
+}

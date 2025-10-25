@@ -16,6 +16,11 @@ func SetupFeesRoutes(app *fiber.App) {
 	// API routes for fees
 	feesAPI := app.Group("/api/fees")
 	feesAPI.Use(auth.AuthMiddleware)
+	
+	// Add apply fees route
+	feesAPI.Post("/apply", func(c *fiber.Ctx) error {
+		return ApplyFeesAPI(c, config.GetDB())
+	})
 
 	// Web routes
 	fees.Get("/", func(c *fiber.Ctx) error {

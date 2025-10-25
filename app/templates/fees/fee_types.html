@@ -103,6 +103,43 @@
                         <option value="on_demand">On demand (e.g., school trips)</option>
                     </select>
                 </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Apply To</label>
+                    <select id="feeTypeScope" name="scope" required onchange="handleScopeChange()"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                        <option value="manual">Manual assignment</option>
+                        <option value="all_students">All students</option>
+                        <option value="all_classes">All classes</option>
+                        <option value="class">Specific class</option>
+                        <option value="student">Specific student</option>
+                    </select>
+                </div>
+                <div id="classSelector" class="hidden">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Select Class</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="selectedClassName" readonly 
+                               class="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50" 
+                               placeholder="No class selected">
+                        <button type="button" onclick="openClassModal()" 
+                                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            Select
+                        </button>
+                    </div>
+                    <input type="hidden" id="feeTypeClass" name="target_class_id">
+                </div>
+                <div id="studentSelector" class="hidden">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Select Student</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="selectedStudentName" readonly 
+                               class="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50" 
+                               placeholder="No student selected">
+                        <button type="button" onclick="openStudentModal()" 
+                                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            Select
+                        </button>
+                    </div>
+                    <input type="hidden" id="feeTypeStudent" name="target_student_id">
+                </div>
             </div>
             <div class="flex justify-end gap-3 mt-6">
                 <button type="button" id="cancelAddFeeType" 
@@ -126,8 +163,93 @@ document.addEventListener('DOMContentLoaded', function() {
     const cancelAddFeeType = document.getElementById('cancelAddFeeType');
     const addFeeTypeForm = document.getElementById('addFeeTypeForm');
 
-    // Load fee types
+    // Load classes and students for selectors
+    let classes = [];
+    let students = [];
+
+    async function loadClassesAndStudents() {
+        try {
+            const [classesRes, studentsRes] = await Promise.all([
+                fetch('/api/classes'),
+                fetch('/api/students')
+            ]);
+            
+            if (classesRes.ok) {
+                const classesData = await classesRes.json();
+                classes = classesData.data || classesData.classes || [];
+                populateClassSelector();
+                populateClassModal(); // Populate class selection modal
+            }
+            
+            if (studentsRes.ok) {
+                const studentsData = await studentsRes.json();
+                students = studentsData.data || studentsData.students || [];
+                populateStudentSelector();
+                populateStudentModal(); // Populate student selection modal
+            }
+        } catch (error) {
+            console.error('Error loading classes and students:', error);
+        }
+    }
+
+    function populateClassSelector() {
+        const classSelect = document.getElementById('feeTypeClass');
+        classSelect.innerHTML = '<option value="">Select a class</option>';
+        classes.forEach(cls => {
+            classSelect.innerHTML += `<option value="${cls.id}">${cls.name}</option>`;
+        });
+    }
+
+    function populateStudentSelector() {
+        const studentSelect = document.getElementById('feeTypeStudent');
+        studentSelect.innerHTML = '<option value="">Select a student</option>';
+        students.forEach(student => {
+            studentSelect.innerHTML += `<option value="${student.id}">${student.first_name} ${student.last_name}</option>`;
+        });
+    }
+
+    // Populate class selection modal
+    function populateClassModal() {
+        const container = document.getElementById('classListContainer');
+        if (!container) return;
+        
+        if (classes.length === 0) {
+            container.innerHTML = '<p class="text-gray-500 text-center col-span-2">No classes available</p>';
+            return;
+        }
+        
+        container.innerHTML = classes.map(cls => `
+            <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                 onclick="selectClass('${cls.id}', '${cls.name}')">
+                <div class="font-medium text-gray-900">${cls.name}</div>
+                <div class="text-sm text-gray-500">${cls.code}</div>
+            </div>
+        `).join('');
+    }
+
+    // Populate student selection modal
+    function populateStudentModal() {
+        const container = document.getElementById('studentListContainer');
+        if (!container) return;
+        
+        if (students.length === 0) {
+            container.innerHTML = '<p class="text-gray-500 text-center col-span-2">No students available</p>';
+            return;
+        }
+        
+        container.innerHTML = students.map(student => `
+            <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                 onclick="selectStudent('${student.id}', '${student.first_name} ${student.last_name}')">
+                <div class="font-medium text-gray-900">${student.first_name} ${student.last_name}</div>
+                <div class="text-sm text-gray-500">ID: ${student.student_id}</div>
+                ${student.class_name ? `<div class="text-sm text-gray-500">Class: ${student.class_name}</div>` : ''}
+            </div>
+        `).join('');
+    }
+
+    // Load fee types and classes/students
     loadFeeTypes();
+    loadClassesAndStudents();
 
     // Modal handlers
     addFeeTypeBtn.addEventListener('click', () => {
@@ -147,6 +269,20 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const formData = new FormData(addFeeTypeForm);
         const data = Object.fromEntries(formData);
+        
+        // Clean up the data - remove empty values for target_class_id and target_student_id
+        if (data.target_class_id === '') {
+            delete data.target_class_id;
+        }
+        
+        if (data.target_student_id === '') {
+            delete data.target_student_id;
+        }
+        
+        // Also remove empty description
+        if (data.description === '') {
+            delete data.description;
+        }
 
         try {
             const response = await fetch('/api/fee-types', {
@@ -267,4 +403,103 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
     }
 });
+
+// Global function for scope change handling
+function handleScopeChange() {
+    const scope = document.getElementById('feeTypeScope').value;
+    const classSelector = document.getElementById('classSelector');
+    const studentSelector = document.getElementById('studentSelector');
+    
+    classSelector.classList.add('hidden');
+    studentSelector.classList.add('hidden');
+    
+    if (scope === 'class') {
+        classSelector.classList.remove('hidden');
+    } else if (scope === 'student') {
+        studentSelector.classList.remove('hidden');
+    }
+}
+
+// Modal functions for class and student selection
+function openClassModal() {
+    // Refresh the class list in case new classes were added
+    populateClassModal();
+    document.getElementById('classSelectionModal').classList.remove('hidden');
+}
+
+function closeClassModal() {
+    document.getElementById('classSelectionModal').classList.add('hidden');
+}
+
+function openStudentModal() {
+    // Refresh the student list in case new students were added
+    populateStudentModal();
+    document.getElementById('studentSelectionModal').classList.remove('hidden');
+}
+
+function closeStudentModal() {
+    document.getElementById('studentSelectionModal').classList.add('hidden');
+}
+
+function selectClass(classId, className) {
+    document.getElementById('selectedClassName').value = className;
+    document.getElementById('feeTypeClass').value = classId;
+    closeClassModal();
+}
+
+function selectStudent(studentId, studentName) {
+    document.getElementById('selectedStudentName').value = studentName;
+    document.getElementById('feeTypeStudent').value = studentId;
+    closeStudentModal();
+}
 </script>
+
+<!-- Class Selection Modal -->
+<div id="classSelectionModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col">
+        <div class="flex justify-between items-center p-6 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">Select a Class</h3>
+            <button onclick="closeClassModal()" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div class="p-6 flex-1 overflow-auto">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="classListContainer">
+                <!-- Class items will be populated here -->
+            </div>
+        </div>
+        <div class="flex justify-end p-6 border-t border-gray-200">
+            <button onclick="closeClassModal()" 
+                    class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors duration-200">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Student Selection Modal -->
+<div id="studentSelectionModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col">
+        <div class="flex justify-between items-center p-6 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">Select a Student</h3>
+            <button onclick="closeStudentModal()" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div class="p-6 flex-1 overflow-auto">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="studentListContainer">
+                <!-- Student items will be populated here -->
+            </div>
+        </div>
+        <div class="flex justify-end p-6 border-t border-gray-200">
+            <button onclick="closeStudentModal()" 
+                    class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors duration-200">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>
