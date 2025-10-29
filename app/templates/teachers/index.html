@@ -393,7 +393,14 @@ function openViewModal(teacher) {
     document.getElementById('viewTeacherEmail').textContent = teacher.email;
     document.getElementById('viewTeacherID').textContent = `EMP-${teacher.id}`;
     document.getElementById('viewTeacherPhone').textContent = teacher.phone || 'Not provided';
-    document.getElementById('viewTeacherDepartment').textContent = teacher.department ? teacher.department.name : 'Not Assigned';
+    const departmentElement = document.getElementById('viewTeacherDepartment');
+    if (teacher.departments && teacher.departments.length > 0) {
+        departmentElement.innerHTML = teacher.departments.map(dept => 
+            `<span class="inline-flex px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full mr-1">${dept.name}</span>`
+        ).join('');
+    } else {
+        departmentElement.innerHTML = '<span class="text-gray-500">Not Assigned</span>';
+    }
     
     const statusElement = document.getElementById('viewTeacherStatus');
     statusElement.textContent = teacher.is_active ? 'Active' : 'Inactive';
@@ -862,7 +869,10 @@ function loadTeachers() {
                             </div>
                         </td>
                         <td class="px-4 py-3 text-sm text-gray-900">
-                            ${teacher.department ? teacher.department.name : 'Not Assigned'}
+                            ${teacher.departments && teacher.departments.length > 0 
+                                ? teacher.departments.map(dept => `<span class="inline-flex px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full mr-1 mb-1">${dept.name}</span>`).join('')
+                                : '<span class="text-gray-500">Not Assigned</span>'
+                            }
                         </td>
                         <td class="px-4 py-3">
                             ${teacher.roles && teacher.roles.length > 0 

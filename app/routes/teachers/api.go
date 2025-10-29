@@ -106,11 +106,13 @@ func GetTeacherStatsAPI(c *fiber.Ctx) error {
 
 func CreateTeacherAPI(c *fiber.Ctx) error {
 	type CreateTeacherRequest struct {
-		FirstName string `json:"first_name"`
-		LastName  string `json:"last_name"`
-		Email     string `json:"email"`
-		Password  string `json:"password"`
-		Role      string `json:"role"`
+		FirstName     string   `json:"first_name"`
+		LastName      string   `json:"last_name"`
+		Email         string   `json:"email"`
+		Password      string   `json:"password"`
+		Role          string   `json:"role"`
+		DepartmentIDs []string `json:"department_ids"`
+		SubjectIDs    []string `json:"subject_ids"`
 	}
 
 	var req CreateTeacherRequest
@@ -134,11 +136,21 @@ func CreateTeacherAPI(c *fiber.Ctx) error {
 		Password:  req.Password,
 	}
 
-	if err := database.CreateTeacher(config.GetDB(), user); err != nil {
+	if err := database.CreateTeacher(config.GetDB(), user, nil); err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"error":   "Failed to create teacher",
 			"details": err.Error(),
 		})
+	}
+
+	// Link to departments if provided
+	if len(req.DepartmentIDs) > 0 {
+		if err := database.LinkTeacherToDepartments(config.GetDB(), user.ID, req.DepartmentIDs); err != nil {
+			return c.Status(500).JSON(fiber.Map{
+				"error":   "Teacher created but failed to link departments",
+				"details": err.Error(),
+			})
+		}
 	}
 
 	// Assign the specified role
@@ -146,6 +158,16 @@ func CreateTeacherAPI(c *fiber.Ctx) error {
 		if err := database.AssignTeacherRole(config.GetDB(), user.ID, req.Role); err != nil {
 			return c.Status(500).JSON(fiber.Map{
 				"error":   "Teacher created but failed to assign role",
+				"details": err.Error(),
+			})
+		}
+	}
+
+	// Link subjects if provided
+	if len(req.SubjectIDs) > 0 {
+		if err := database.LinkTeacherToSubjects(config.GetDB(), user.ID, req.SubjectIDs); err != nil {
+			return c.Status(500).JSON(fiber.Map{
+				"error":   "Teacher created but failed to link subjects",
 				"details": err.Error(),
 			})
 		}

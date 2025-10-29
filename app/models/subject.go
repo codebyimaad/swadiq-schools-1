@@ -14,4 +14,5 @@ type Subject struct {
 	Department   *Department `json:"department,omitempty" gorm:"foreignKey:DepartmentID;references:ID"`
 	Papers       []*Paper    `json:"papers,omitempty" gorm:"foreignKey:SubjectID;references:ID"` // A subject can have multiple papers
 	Classes      []*Class    `json:"classes,omitempty" gorm:"many2many:class_subjects;"`
+    Teachers     []*User     `json:"teachers,omitempty" gorm:"many2many:teacher_subjects;"`
 }

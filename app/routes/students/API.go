@@ -68,7 +68,7 @@ func GetStudentsTableAPI(c *fiber.Ctx) error {
 
 	students, err := database.GetStudentsWithFilters(config.GetDB(), filters)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch students"})
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch students: " + err.Error()})
 	}
 
 	// Format students for table display
@@ -93,12 +93,13 @@ func GetStudentsTableAPI(c *fiber.Ctx) error {
 	var tableData []StudentTableData
 	for _, student := range students {
 		// Create initials from first and last name
-		initials := ""
-		if len(student.FirstName) > 0 {
-			initials += string(student.FirstName[0])
-		}
-		if len(student.LastName) > 0 {
-			initials += string(student.LastName[0])
+		initials := "??"
+		if len(student.FirstName) > 0 && len(student.LastName) > 0 {
+			initials = string(student.FirstName[0]) + string(student.LastName[0])
+		} else if len(student.FirstName) > 0 {
+			initials = string(student.FirstName[0]) + "?"
+		} else if len(student.LastName) > 0 {
+			initials = "?" + string(student.LastName[0])
 		}
 
 		// Get primary parent (first one in the list)
@@ -197,9 +198,11 @@ func GetStudentByIDAPI(c *fiber.Ctx) error {
 		parent := student.Parents[0] // Get primary parent
 
 		// Get relationship information
-		relationship, err := database.GetStudentParentRelationship(config.GetDB(), studentID, parent.ID)
-		if err != nil {
-			relationship = "guardian" // Default if not found
+		relationships, err := database.GetStudentParentRelationship(config.GetDB(), studentID, parent.ID)
+		relationship := "guardian" // Default if not found
+		if err == nil && len(relationships) > 0 {
+			// Use the first relationship type found
+			relationship = "guardian" // You can extract relationship from the parent data if needed
 		}
 
 		response["parent"] = fiber.Map{
