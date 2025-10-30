@@ -146,16 +146,8 @@ func CreateTeacher(db *sql.DB, user *models.User, departmentID *string) error {
 		}
 	}
 
-	// Assign class_teacher role by default
-	roleQuery := `INSERT INTO user_roles (user_id, role_id, created_at)
-				  SELECT $1, r.id, NOW()
-				  FROM roles r
-				  WHERE r.name = 'class_teacher'`
-
-	_, err = db.Exec(roleQuery, user.ID)
-	if err != nil {
-		return err
-	}
+	// Note: class_teacher role will be assigned only when teacher is assigned to a class
+	// No default role assignment here
 
 	user.IsActive = true
 	return nil
@@ -643,7 +635,36 @@ func CreateTerm(db *sql.DB, term *models.Term) error {
 }
 
 func GetStudentsByClass(db *sql.DB, classID string) ([]*models.Student, error) {
-	return []*models.Student{}, nil
+	query := `SELECT id, student_id, first_name, last_name, date_of_birth, gender, address, class_id, is_active, created_at, updated_at
+			  FROM students 
+			  WHERE class_id = $1 AND is_active = true
+			  ORDER BY first_name, last_name`
+
+	rows, err := db.Query(query, classID)
+	if err != nil {
+		return []*models.Student{}, nil
+	}
+	defer rows.Close()
+
+	var students []*models.Student
+	for rows.Next() {
+		student := &models.Student{}
+		err := rows.Scan(
+			&student.ID, &student.StudentID, &student.FirstName, &student.LastName,
+			&student.DateOfBirth, &student.Gender, &student.Address, &student.ClassID,
+			&student.IsActive, &student.CreatedAt, &student.UpdatedAt,
+		)
+		if err != nil {
+			continue
+		}
+		students = append(students, student)
+	}
+
+	if students == nil {
+		students = []*models.Student{}
+	}
+
+	return students, nil
 }
 
 func GetAttendanceByClassAndDate(db *sql.DB, classID string, date time.Time) ([]*models.Attendance, error) {
@@ -659,14 +680,19 @@ func GetAttendanceStats(db *sql.DB, classID string, startDate, endDate time.Time
 }
 
 func GetAllClasses(db *sql.DB) ([]*models.Class, error) {
+	// Query with student count
 	query := `SELECT c.id, c.name, c.code, c.teacher_id, c.is_active, c.created_at, c.updated_at,
 			  u.first_name, u.last_name, u.email,
-			  COUNT(s.id) as student_count
+			  COALESCE(s.student_count, 0) as student_count
 			  FROM classes c
 			  LEFT JOIN users u ON c.teacher_id = u.id
-			  LEFT JOIN students s ON c.id = s.class_id AND s.is_active = true
+			  LEFT JOIN (
+				  SELECT class_id, COUNT(*) as student_count 
+				  FROM students 
+				  WHERE is_active = true 
+				  GROUP BY class_id
+			  ) s ON c.id = s.class_id
 			  WHERE c.is_active = true
-			  GROUP BY c.id, c.name, c.code, c.teacher_id, c.is_active, c.created_at, c.updated_at, u.first_name, u.last_name, u.email
 			  ORDER BY c.name`
 
 	rows, err := db.Query(query)
@@ -698,7 +724,9 @@ func GetAllClasses(db *sql.DB) ([]*models.Class, error) {
 			}
 		}
 
-		// You can add student count as a field if needed
+		// Set student count
+		class.StudentCount = studentCount
+
 		classes = append(classes, class)
 	}
 
@@ -718,15 +746,78 @@ func GetDashboardStats(db *sql.DB) (map[string]interface{}, error) {
 }
 
 func CreateClass(db *sql.DB, class *models.Class) error {
-	return nil
+	// Start transaction
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Check if teacher is already assigned to another class
+	if class.TeacherID != nil && *class.TeacherID != "" {
+		var existingClassID string
+		err := tx.QueryRow("SELECT id FROM classes WHERE teacher_id = $1 AND is_active = true LIMIT 1", *class.TeacherID).Scan(&existingClassID)
+		if err == nil {
+			return fmt.Errorf("teacher is already assigned to another class")
+		}
+	}
+
+	query := `INSERT INTO classes (name, code, teacher_id, is_active, created_at, updated_at)
+			  VALUES ($1, $2, $3, $4, NOW(), NOW())
+			  RETURNING id, created_at, updated_at`
+
+	class.IsActive = true
+	err = tx.QueryRow(query, class.Name, class.Code, class.TeacherID, class.IsActive).Scan(
+		&class.ID, &class.CreatedAt, &class.UpdatedAt,
+	)
+	if err != nil {
+		return err
+	}
+
+	// If teacher is assigned, add class_teacher role
+	if class.TeacherID != nil && *class.TeacherID != "" {
+		err = assignClassTeacherRoleInDB(tx, *class.TeacherID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
 }
 
 func GetClassStatistics(db *sql.DB, classID string) (map[string]interface{}, error) {
-	return make(map[string]interface{}), nil
+	stats := make(map[string]interface{})
+
+	// Total students
+	var totalStudents int
+	err := db.QueryRow("SELECT COUNT(*) FROM students WHERE class_id = $1 AND is_active = true", classID).Scan(&totalStudents)
+	if err != nil {
+		totalStudents = 0
+	}
+
+	// Male students
+	var maleStudents int
+	err = db.QueryRow("SELECT COUNT(*) FROM students WHERE class_id = $1 AND is_active = true AND gender = 'male'", classID).Scan(&maleStudents)
+	if err != nil {
+		maleStudents = 0
+	}
+
+	// Female students
+	var femaleStudents int
+	err = db.QueryRow("SELECT COUNT(*) FROM students WHERE class_id = $1 AND is_active = true AND gender = 'female'", classID).Scan(&femaleStudents)
+	if err != nil {
+		femaleStudents = 0
+	}
+
+	stats["total_students"] = totalStudents
+	stats["male_students"] = maleStudents
+	stats["female_students"] = femaleStudents
+
+	return stats, nil
 }
 
 func GetClassStudents(db *sql.DB, classID string) ([]*models.Student, error) {
-	return []*models.Student{}, nil
+	return GetStudentsByClass(db, classID)
 }
 
 func AddSubjectsToClass(db *sql.DB, classID string, subjectIDs []string) error {
@@ -759,6 +850,12 @@ func GetPaperByID(db *sql.DB, id string) (*models.Paper, error) {
 
 func GetSubjectByID(db *sql.DB, id string) (*models.Subject, error) {
 	return &models.Subject{}, nil
+}
+
+func RemoveSubjectFromClass(db *sql.DB, classID, subjectID string) error {
+	query := `DELETE FROM class_subjects WHERE class_id = $1 AND subject_id = $2`
+	_, err := db.Exec(query, classID, subjectID)
+	return err
 }
 
 func CreatePaper(db *sql.DB, paper *models.Paper) error {
@@ -1066,9 +1163,43 @@ func SearchStudents(db *sql.DB, query string) ([]*models.Student, error) {
 	return []*models.Student{}, nil
 }
 
-func RemoveSubjectFromClass(db *sql.DB, classID, subjectID string) error {
-	return nil
-}
+
 func GetAllStudents(db *sql.DB) ([]*models.Student, error) {
 	return []*models.Student{}, nil
+}
+
+// assignClassTeacherRoleInDB assigns the class_teacher role to a user
+func assignClassTeacherRoleInDB(tx *sql.Tx, userID string) error {
+	// Get class_teacher role ID
+	var roleID string
+	err := tx.QueryRow("SELECT id FROM roles WHERE name = 'class_teacher' LIMIT 1").Scan(&roleID)
+	if err != nil {
+		return fmt.Errorf("class_teacher role not found: %v", err)
+	}
+
+	// Check if user already has this role
+	var existingID string
+	err = tx.QueryRow("SELECT id FROM user_roles WHERE user_id = $1 AND role_id = $2 LIMIT 1", userID, roleID).Scan(&existingID)
+	if err == nil {
+		// Role already exists
+		return nil
+	}
+
+	// Add the role
+	_, err = tx.Exec("INSERT INTO user_roles (user_id, role_id, created_at) VALUES ($1, $2, NOW())", userID, roleID)
+	return err
+}
+
+// removeClassTeacherRoleInDB removes the class_teacher role from a user
+func removeClassTeacherRoleInDB(tx *sql.Tx, userID string) error {
+	// Get class_teacher role ID
+	var roleID string
+	err := tx.QueryRow("SELECT id FROM roles WHERE name = 'class_teacher' LIMIT 1").Scan(&roleID)
+	if err != nil {
+		return fmt.Errorf("class_teacher role not found: %v", err)
+	}
+
+	// Remove the role
+	_, err = tx.Exec("DELETE FROM user_roles WHERE user_id = $1 AND role_id = $2", userID, roleID)
+	return err
 }

@@ -234,7 +234,7 @@
         </div>
 
         <div class="flex justify-end gap-3 p-6 border-t border-gray-200">
-            <button type="button" onclick="clearTeacherSelection()" 
+            <button type="button" onclick="isEditMode ? clearEditTeacherSelection() : clearTeacherSelection()" 
                     class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors duration-200">
                 Clear Selection
             </button>
@@ -681,7 +681,7 @@
         document.getElementById(`teacher_${paperId}`).value = '';
     }
 
-    // Override selectTeacher to handle paper teacher assignment
+    // Override selectTeacher to handle different contexts
     const originalSelectTeacher = selectTeacher;
     selectTeacher = function(teacher) {
         if (window.currentPaperId) {
@@ -693,8 +693,13 @@
             document.getElementById(`teacher_${window.currentPaperId}`).value = paperTeacherAssignments[window.currentPaperId].name;
             window.currentPaperId = null;
             closeTeacherModal();
+        } else if (isEditMode) {
+            // Edit mode teacher assignment
+            document.getElementById('editSelectedTeacherDisplay').value = `${teacher.first_name} ${teacher.last_name}`;
+            document.getElementById('editClassTeacher').value = teacher.id;
+            closeTeacherModal();
         } else {
-            // Regular class teacher assignment
+            // Regular class teacher assignment (create mode)
             originalSelectTeacher(teacher);
         }
     };
@@ -1207,7 +1212,7 @@
                 <td class="px-4 py-3">
                     <div class="flex items-center gap-2">
                         <a href="/classes/${classItem.id}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">View</a>
-                        <button onclick="openEditModal('${classItem.id}', '${classItem.name}', '${classItem.code || ''}', '${classItem.teacher ? classItem.teacher.id : ''}')"
+                        <button onclick="openEditModal('${classItem.id}', '${classItem.name.replace(/'/g, "\\'").replace(/"/g, '\\"')}', '${classItem.code || ''}', '${classItem.teacher ? classItem.teacher.id : ''}', '${classItem.teacher ? (classItem.teacher.first_name + ' ' + classItem.teacher.last_name).replace(/'/g, "\\'").replace(/"/g, '\\"') : ''}')"
                                 class="text-primary-600 hover:text-primary-800 text-sm font-medium">Edit</button>
                         <button onclick="openDeleteModal('${classItem.id}', '${classItem.name}')"
                                 class="text-red-600 hover:text-red-800 text-sm font-medium">Delete</button>
@@ -1252,17 +1257,16 @@
     }
 
     // Edit Modal functionality
-    function openEditModal(classId, className, classCode, teacherId) {
+    function openEditModal(classId, className, classCode, teacherId, teacherName) {
+        isEditMode = true;
         document.getElementById('editClassId').value = classId;
         document.getElementById('editClassName').value = className;
         document.getElementById('editClassCode').value = classCode;
 
         // Set teacher if exists
-        if (teacherId) {
-            // You might want to fetch teacher details here
+        if (teacherId && teacherId !== 'undefined' && teacherId !== '') {
             document.getElementById('editClassTeacher').value = teacherId;
-            // For now, just show the teacher ID
-            document.getElementById('editSelectedTeacherDisplay').value = `Teacher ID: ${teacherId}`;
+            document.getElementById('editSelectedTeacherDisplay').value = teacherName || `Teacher ID: ${teacherId}`;
         } else {
             document.getElementById('editClassTeacher').value = '';
             document.getElementById('editSelectedTeacherDisplay').value = '';
@@ -1273,14 +1277,24 @@
     }
 
     function closeEditModal() {
+        isEditMode = false;
         editClassModal.classList.add('hidden');
         document.body.style.overflow = 'auto';
         editClassForm.reset();
+        // Clear teacher selection
+        document.getElementById('editClassTeacher').value = '';
+        document.getElementById('editSelectedTeacherDisplay').value = '';
     }
 
     function openEditTeacherModal() {
         isEditMode = true;
         openTeacherModal();
+    }
+
+    function clearEditTeacherSelection() {
+        document.getElementById('editSelectedTeacherDisplay').value = '';
+        document.getElementById('editClassTeacher').value = '';
+        closeTeacherModal();
     }
 
     // Delete Modal functionality

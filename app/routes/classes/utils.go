@@ -50,11 +50,28 @@ func GetClassByID(db *sql.DB, classID string) (*models.Class, error) {
 
 // UpdateClass updates an existing class in the database
 func UpdateClass(db *sql.DB, class *models.Class) error {
-	query := `
-		UPDATE classes 
-		SET name = $1, teacher_id = $2, updated_at = NOW()
-		WHERE id = $3 AND is_active = true
-	`
+	// Start transaction
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Get current teacher for this class
+	var currentTeacherID *string
+	err = tx.QueryRow("SELECT teacher_id FROM classes WHERE id = $1", class.ID).Scan(&currentTeacherID)
+	if err != nil {
+		return fmt.Errorf("failed to get current teacher: %v", err)
+	}
+
+	// Check if new teacher is already assigned to another class
+	if class.TeacherID != nil && *class.TeacherID != "" {
+		var existingClassID string
+		err := tx.QueryRow("SELECT id FROM classes WHERE teacher_id = $1 AND is_active = true AND id != $2 LIMIT 1", *class.TeacherID, class.ID).Scan(&existingClassID)
+		if err == nil {
+			return fmt.Errorf("teacher is already assigned to another class")
+		}
+	}
 
 	var teacherID interface{}
 	if class.TeacherID != nil && *class.TeacherID != "" {
@@ -63,26 +80,65 @@ func UpdateClass(db *sql.DB, class *models.Class) error {
 		teacherID = nil
 	}
 
-	_, err := db.Exec(query, class.Name, teacherID, class.ID)
+	query := `
+		UPDATE classes 
+		SET name = $1, code = $2, teacher_id = $3, updated_at = NOW()
+		WHERE id = $4 AND is_active = true
+	`
+
+	_, err = tx.Exec(query, class.Name, class.Code, teacherID, class.ID)
 	if err != nil {
 		return fmt.Errorf("failed to update class: %v", err)
+	}
+
+	// Handle role changes
+	// Remove class_teacher role from previous teacher if they exist and are different
+	if currentTeacherID != nil && *currentTeacherID != "" {
+		if class.TeacherID == nil || *class.TeacherID == "" || *currentTeacherID != *class.TeacherID {
+			err = removeClassTeacherRoleFromDB(tx, *currentTeacherID)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	// Add class_teacher role to new teacher if they exist
+	if class.TeacherID != nil && *class.TeacherID != "" {
+		err = assignClassTeacherRoleFromDB(tx, *class.TeacherID)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Update the timestamp
 	class.UpdatedAt = time.Now()
 
-	return nil
+	return tx.Commit()
 }
 
 // DeleteClass soft deletes a class (sets is_active = false)
 func DeleteClass(db *sql.DB, classID string) error {
+	// Start transaction
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Get current teacher for this class
+	var currentTeacherID *string
+	err = tx.QueryRow("SELECT teacher_id FROM classes WHERE id = $1", classID).Scan(&currentTeacherID)
+	if err != nil {
+		return fmt.Errorf("failed to get current teacher: %v", err)
+	}
+
 	query := `
 		UPDATE classes 
 		SET is_active = false, updated_at = NOW()
 		WHERE id = $1
 	`
 
-	result, err := db.Exec(query, classID)
+	result, err := tx.Exec(query, classID)
 	if err != nil {
 		return fmt.Errorf("failed to delete class: %v", err)
 	}
@@ -96,7 +152,15 @@ func DeleteClass(db *sql.DB, classID string) error {
 		return fmt.Errorf("class not found or already deleted")
 	}
 
-	return nil
+	// Remove class_teacher role from teacher if they exist
+	if currentTeacherID != nil && *currentTeacherID != "" {
+		err = removeClassTeacherRoleFromDB(tx, *currentTeacherID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
 }
 
 // ValidateClassName validates class name format and uniqueness
@@ -331,4 +395,40 @@ func SaveClassPromotionSettings(db *sql.DB, promotion *models.ClassPromotion) er
 		)
 		return err
 	}
+}
+
+// assignClassTeacherRoleFromDB assigns the class_teacher role to a user
+func assignClassTeacherRoleFromDB(tx *sql.Tx, userID string) error {
+	// Get class_teacher role ID
+	var roleID string
+	err := tx.QueryRow("SELECT id FROM roles WHERE name = 'class_teacher' LIMIT 1").Scan(&roleID)
+	if err != nil {
+		return fmt.Errorf("class_teacher role not found: %v", err)
+	}
+
+	// Check if user already has this role
+	var existingID string
+	err = tx.QueryRow("SELECT id FROM user_roles WHERE user_id = $1 AND role_id = $2 LIMIT 1", userID, roleID).Scan(&existingID)
+	if err == nil {
+		// Role already exists
+		return nil
+	}
+
+	// Add the role
+	_, err = tx.Exec("INSERT INTO user_roles (user_id, role_id, created_at) VALUES ($1, $2, NOW())", userID, roleID)
+	return err
+}
+
+// removeClassTeacherRoleFromDB removes the class_teacher role from a user
+func removeClassTeacherRoleFromDB(tx *sql.Tx, userID string) error {
+	// Get class_teacher role ID
+	var roleID string
+	err := tx.QueryRow("SELECT id FROM roles WHERE name = 'class_teacher' LIMIT 1").Scan(&roleID)
+	if err != nil {
+		return fmt.Errorf("class_teacher role not found: %v", err)
+	}
+
+	// Remove the role
+	_, err = tx.Exec("DELETE FROM user_roles WHERE user_id = $1 AND role_id = $2", userID, roleID)
+	return err
 }
