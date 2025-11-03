@@ -35,4 +35,11 @@ jobs:
           # Build and run
           go build -o main .
           nohup ./main > app.log 2>&1 &
-          echo "Application deployed and running on port 3000"
+          sleep 2
+          # Check if process is running
+          if pgrep -f "./main" > /dev/null; then
+            echo "Application deployed and running on port 8080"
+          else
+            echo "Failed to start application. Check logs:"
+            tail -10 app.log
+          fi
