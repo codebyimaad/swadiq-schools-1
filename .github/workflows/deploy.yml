@@ -1,4 +1,4 @@
-name: Deploy to Server
+name: 🚀 Deploy Go App to Server
 
 on:
   push:
@@ -6,52 +6,54 @@ on:
 
 jobs:
   deploy:
+    name: 🛠️ Build & Deploy
     runs-on: ubuntu-latest
-    
+
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Deploy to server
+    - name: 📦 Checkout Repository
+      uses: actions/checkout@v3
+
+    - name: 🚀 Deploy to Server (Password SSH)
       uses: appleboy/ssh-action@v0.1.5
       with:
         host: ${{ secrets.HOST }}
         username: ${{ secrets.USERNAME }}
         password: ${{ secrets.PASSWORD }}
+
         script: |
           set -e
+
+          echo "📂 Moving to home directory..."
           cd ~
-          echo "🔄 Stopping existing processes..."
-          pkill -f "go run main.go" >/dev/null 2>&1 || true
+
+          echo "🛑 Stopping existing app..."
           pkill -f "./main" >/dev/null 2>&1 || true
-          
-          echo "📥 Updating code..."
+
+          echo "📥 Pulling latest code..."
           if [ -d "swadiq-schools" ]; then
             cd swadiq-schools
-            git pull origin main >/dev/null 2>&1
+            git pull origin main
           else
-            git clone https://github.com/ImaadDean/swadiq-schools.git >/dev/null 2>&1
+            git clone https://github.com/ImaadDean/swadiq-schools.git
             cd swadiq-schools
           fi
-          
-          echo "📦 Installing dependencies..."
-          go mod tidy >/dev/null 2>&1
-          
-          echo "🔨 Building application..."
-          go build -o main . >/dev/null 2>&1
-          chmod +x main
-          
-          echo "🚀 Starting application..."
+
+          echo "📦 Installing Go modules..."
+          go mod tidy
+
+          echo "🔨 Building app..."
+          go build -o main .
+
+          echo "🚀 Starting app..."
           nohup ./main > app.log 2>&1 &
-          APP_PID=$!
-          
           sleep 3
-          
-          if kill -0 $APP_PID 2>/dev/null; then
-            echo "✅ Application deployed successfully!"
-            echo "📍 Running on port 8080 (PID: $APP_PID)"
+
+          echo "✅ Checking status..."
+          if pgrep -f "./main" > /dev/null; then
+            echo "✅ Deployment successful! 🎉"
           else
-            echo "❌ Application failed to start"
-            echo "📋 Error logs:"
+            echo "❌ Failed to start the app!"
+            echo "👇 Last 10 log lines:"
             tail -10 app.log
             exit 1
           fi
