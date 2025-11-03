@@ -34,12 +34,16 @@ jobs:
           go mod tidy
           # Build and run
           go build -o main .
+          echo "Starting application..."
           nohup ./main > app.log 2>&1 &
-          sleep 2
+          sleep 3
           # Check if process is running
           if pgrep -f "./main" > /dev/null; then
-            echo "Application deployed and running on port 8080"
+            echo "✅ Application deployed and running on port 8080"
+            echo "Process ID: $(pgrep -f './main')"
           else
-            echo "Failed to start application. Check logs:"
-            tail -10 app.log
+            echo "❌ Failed to start application. Check logs:"
+            tail -20 app.log
+            echo "Build output:"
+            ls -la main
           fi
