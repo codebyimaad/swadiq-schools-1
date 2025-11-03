@@ -1,48 +1,56 @@
-- name: 🚀 Deploy to Server via SSH (Password)
-  uses: appleboy/ssh-action@v0.1.5
-  with:
-    host: ${{ secrets.HOST }}
-    username: ${{ secrets.USERNAME }}
-    password: ${{ secrets.PASSWORD }}
-    port: 22
-    script_stop: false   # <---- THIS IS THE FIX
-    timeout: 2000s
-    envs: GITHUB_SHA
-    script: |
-      set -e
+name: Deploy to Server
 
-      echo "📂 Moving to home directory..."
-      cd ~
+on:
+  push:
+    branches: [ main ]
 
-      echo "🛑 Stopping existing application (if running)..."
-      pkill -f "./main" >/dev/null 2>&1 || true
-
-      echo "📥 Updating project..."
-      if [ -d "swadiq-schools" ]; then
-        cd swadiq-schools
-        git pull origin main
-      else
-        git clone https://github.com/ImaadDean/swadiq-schools.git
-        cd swadiq-schools
-      fi
-
-      echo "📦 Installing Go dependencies..."
-      go mod tidy
-
-      echo "🔨 Building Go binary..."
-      go build -o main .
-
-      echo "🚀 Starting Go app..."
-      nohup ./main > app.log 2>&1 &
-      disown
-
-      echo "⏳ Waiting 3 seconds..."
-      sleep 3
-
-      if pgrep -f "./main" > /dev/null; then
-        echo "✅ Deployment successful"
-      else
-        echo "❌ App failed to start"
-        tail -20 app.log
-        exit 1
-      fi
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: 🚀 Deploy to Server via SSH
+      uses: appleboy/ssh-action@v0.1.5
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        password: ${{ secrets.PASSWORD }}
+        port: 22
+        script_stop: false
+        timeout: 2000s
+        script: |
+          set -e
+          
+          echo "📂 Moving to home directory..."
+          cd ~
+          
+          echo "🛑 Stopping existing application..."
+          pkill -f "./main" >/dev/null 2>&1 || true
+          
+          echo "📥 Updating project..."
+          if [ -d "swadiq-schools" ]; then
+            cd swadiq-schools
+            git pull origin main
+          else
+            git clone https://github.com/ImaadDean/swadiq-schools.git
+            cd swadiq-schools
+          fi
+          
+          echo "📦 Installing dependencies..."
+          go mod tidy
+          
+          echo "🔨 Building application..."
+          go build -o main .
+          
+          echo "🚀 Starting application..."
+          nohup ./main > app.log 2>&1 &
+          disown
+          
+          sleep 3
+          
+          if pgrep -f "./main" > /dev/null; then
+            echo "✅ Deployment successful"
+          else
+            echo "❌ App failed to start"
+            tail -20 app.log
+            exit 1
+          fi
