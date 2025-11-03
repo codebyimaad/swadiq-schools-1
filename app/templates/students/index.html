@@ -213,7 +213,7 @@
 
     <!-- Students Table -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div class="overflow-x-auto max-h-96 overflow-y-auto">
+        <div class="overflow-x-auto">
             <table class="w-full">
                 <thead class="bg-gray-50 border-b border-gray-200">
                     <tr>
@@ -403,19 +403,47 @@
             </table>
         </div>
 
-        <!-- Pagination Info and Loading Indicator -->
-        <div class="bg-gray-50 px-4 py-3 border-t border-gray-200">
-            <div class="flex items-center justify-between">
-                <div id="pagination-text" class="text-sm text-gray-700">
-                    Showing <span class="font-medium">0</span> of <span class="font-medium">0</span> results
+        <!-- Students Status Section -->
+        <div id="students-status-container" class="mt-4 px-4 py-3 bg-white border-t border-gray-200">
+            <div class="flex flex-col items-center space-y-3">
+                <!-- Results info -->
+                <div class="text-sm text-gray-700">
+                    Showing <span id="showing-students-count" class="font-medium">0</span> of <span id="total-students-count" class="font-medium">0</span> students
                 </div>
-                <div id="infinite-scroll-loading" class="hidden flex items-center text-sm text-gray-500">
-                    <i class="fas fa-spinner fa-spin mr-2"></i>
-                    Loading more students...
+
+                <!-- Auto-loading indicator -->
+                <div id="auto-loading-students-indicator" class="hidden flex items-center justify-center space-x-3 py-4 text-gray-600 bg-blue-50 rounded-lg border border-blue-200 transition-all duration-300">
+                    <div class="animate-spin rounded-full h-5 w-5 border-2 border-blue-600 border-t-transparent"></div>
+                    <span class="text-sm font-medium">Loading more students...</span>
+                    <div class="flex space-x-1">
+                        <div class="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style="animation-delay: 0ms"></div>
+                        <div class="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style="animation-delay: 150ms"></div>
+                        <div class="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style="animation-delay: 300ms"></div>
+                    </div>
                 </div>
-                <div id="infinite-scroll-end" class="hidden text-sm text-gray-500">
-                    <i class="fas fa-check mr-2"></i>
-                    All students loaded
+
+                <!-- Load More Button -->
+                <div id="load-more-students" class="text-center py-4">
+                    <button id="load-more-btn" class="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors duration-200">
+                        <i class="fas fa-plus mr-2"></i>Load More Students
+                    </button>
+                </div>
+
+                <!-- End of results message -->
+                <div id="end-of-students" class="hidden text-center py-6">
+                    <div class="inline-flex items-center justify-center space-x-3 px-6 py-3 bg-green-50 border border-green-200 rounded-lg text-green-700">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-check-circle text-green-500 text-lg"></i>
+                        </div>
+                        <div class="text-sm font-medium">
+                            You've reached the end of all students
+                        </div>
+                        <div class="flex space-x-1">
+                            <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -756,6 +784,10 @@
         </div>
     </div>
 </div>
+
+<style>
+
+</style>
 
 <script>
 console.log('Students page script loaded');
@@ -1515,8 +1547,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const tableBody = document.getElementById('studentsTableBody');
         const emptyRow = document.getElementById('emptyRow');
         const errorRow = document.getElementById('errorRow');
-        const loadingIndicator = document.getElementById('infinite-scroll-loading');
-        const endIndicator = document.getElementById('infinite-scroll-end');
 
         // Reset pagination if this is a new search/filter
         if (reset) {
@@ -1526,20 +1556,24 @@ document.addEventListener('DOMContentLoaded', function() {
             // Clear existing rows except skeleton and state rows
             const existingRows = tableBody.querySelectorAll('tr:not(.skeleton-row):not(#emptyRow):not(#errorRow)');
             existingRows.forEach(row => row.remove());
-            // Hide end indicator
-            endIndicator.classList.add('hidden');
+            // Reset end indicator
+            const endOfResults = document.getElementById('end-of-students');
+            if (endOfResults) endOfResults.classList.add('hidden');
         }
 
-        if (!hasMoreStudents) return;
+        if (!hasMoreStudents) {
+            console.log('No more students to load');
+            return;
+        }
 
         isLoading = true;
         
         // Show appropriate loading state
         if (reset) {
             showSkeletonLoading();
-            loadingIndicator.classList.add('hidden');
+            hideAutoLoadingStudentsState();
         } else {
-            loadingIndicator.classList.remove('hidden');
+            showAutoLoadingStudentsState();
         }
         emptyRow.classList.add('hidden');
         errorRow.classList.add('hidden');
@@ -1580,7 +1614,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (reset) {
                 hideSkeletonLoading();
             } else {
-                loadingIndicator.classList.add('hidden');
+                hideAutoLoadingStudentsState();
             }
 
             if (data.students && data.students.length > 0) {
@@ -1594,29 +1628,42 @@ document.addEventListener('DOMContentLoaded', function() {
                     appendStudents(data.students);
                 }
                 
-                // Update pagination state
-                hasMoreStudents = data.has_more;
+                // Update pagination state - CRITICAL: Check if we have more data
+                hasMoreStudents = data.has_more && data.students.length === STUDENTS_PER_PAGE;
                 currentOffset = data.next_offset;
                 
-                console.log('Updated pagination state:', { hasMoreStudents, currentOffset, totalLoaded: allStudents.length, totalCount: data.total_count });
-                
-                // Show end indicator if no more students
-                if (!hasMoreStudents) {
-                    endIndicator.classList.remove('hidden');
-                    console.log('All students loaded');
-                }
+                console.log('Updated pagination state:', { 
+                    hasMoreStudents, 
+                    currentOffset, 
+                    totalLoaded: allStudents.length, 
+                    totalCount: data.total_count,
+                    receivedCount: data.students.length,
+                    expectedPerPage: STUDENTS_PER_PAGE
+                });
                 
                 updatePagination(data.total_count, allStudents.length);
-            } else if (reset) {
-                emptyRow.classList.remove('hidden');
+                
+                // Reinitialize infinite scroll after data loads
+                if (!reset) {
+                    reinitializeInfiniteScroll();
+                }
+            } else {
+                // No students returned - we've reached the end
+                hasMoreStudents = false;
+                if (reset) {
+                    emptyRow.classList.remove('hidden');
+                } else {
+                    updatePagination(allStudents.length, allStudents.length);
+                }
             }
         } catch (error) {
             console.error('Error loading students:', error);
+            hasMoreStudents = false; // Stop loading on error
             if (reset) {
                 hideSkeletonLoading();
                 errorRow.classList.remove('hidden');
             } else {
-                loadingIndicator.classList.add('hidden');
+                hideAutoLoadingStudentsState();
             }
         } finally {
             isLoading = false;
@@ -1637,6 +1684,22 @@ document.addEventListener('DOMContentLoaded', function() {
     function hideSkeletonLoading() {
         const skeletonRows = document.querySelectorAll('.skeleton-row');
         skeletonRows.forEach(row => row.classList.add('hidden'));
+    }
+
+    // Show auto-loading students state
+    function showAutoLoadingStudentsState() {
+        const indicator = document.getElementById('auto-loading-students-indicator');
+        if (indicator) {
+            indicator.classList.remove('hidden');
+        }
+    }
+
+    // Hide auto-loading students state
+    function hideAutoLoadingStudentsState() {
+        const indicator = document.getElementById('auto-loading-students-indicator');
+        if (indicator && !indicator.classList.contains('hidden')) {
+            indicator.classList.add('hidden');
+        }
     }
 
     // Load stats from API
@@ -1710,12 +1773,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Append students to the table (for infinite scroll)
     function appendStudents(students) {
         const tableBody = document.getElementById('studentsTableBody');
+        const sentinel = document.getElementById('scroll-sentinel');
 
         students.forEach(student => {
             const row = createStudentRow(student);
-            // Insert before the state rows (empty, error)
-            const emptyRow = document.getElementById('emptyRow');
-            tableBody.insertBefore(row, emptyRow);
+            // Insert before the sentinel to keep sentinel at the bottom
+            if (sentinel) {
+                tableBody.insertBefore(row, sentinel);
+            } else {
+                tableBody.appendChild(row);
+            }
         });
 
         // Update checkbox functionality for new rows
@@ -1786,13 +1853,43 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Update pagination info
     function updatePagination(totalCount, currentCount = 0) {
-        const paginationText = document.getElementById('pagination-text');
-        if (paginationText) {
-            const showing = currentCount || totalCount;
-            paginationText.innerHTML = `
-                Showing <span class="font-medium">${showing}</span> of <span class="font-medium">${totalCount}</span> results
-                ${hasMoreStudents ? '<span class="text-gray-500 ml-2">(scroll for more)</span>' : ''}
-            `;
+        const showingCountEl = document.getElementById('showing-students-count');
+        const totalCountEl = document.getElementById('total-students-count');
+        const endOfResults = document.getElementById('end-of-students');
+        const loadMoreBtn = document.getElementById('load-more-students');
+
+        // Update counts
+        if (showingCountEl) showingCountEl.textContent = currentCount || totalCount;
+        if (totalCountEl) totalCountEl.textContent = totalCount;
+
+        // Show/hide controls based on state
+        const loadMoreContainer = document.getElementById('load-more-students');
+        const loadMoreButton = document.getElementById('load-more-btn');
+        
+        if (hasMoreStudents && currentCount > 0) {
+            if (endOfResults) endOfResults.classList.add('hidden');
+            if (loadMoreContainer) loadMoreContainer.classList.remove('hidden');
+            if (loadMoreButton) {
+                loadMoreButton.disabled = false;
+                loadMoreButton.innerHTML = '<i class="fas fa-plus mr-2"></i>Load More Students';
+            }
+        } else if (currentCount > 0) {
+            if (loadMoreContainer) loadMoreContainer.classList.add('hidden');
+            if (endOfResults) {
+                endOfResults.classList.remove('hidden');
+                setTimeout(() => {
+                    endOfResults.style.opacity = '0';
+                    endOfResults.style.transform = 'translateY(20px)';
+                    endOfResults.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                    setTimeout(() => {
+                        endOfResults.style.opacity = '1';
+                        endOfResults.style.transform = 'translateY(0)';
+                    }, 10);
+                }, 10);
+            }
+        } else {
+            if (loadMoreContainer) loadMoreContainer.classList.add('hidden');
+            if (endOfResults) endOfResults.classList.add('hidden');
         }
     }
 
@@ -2172,37 +2269,53 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Infinite scroll functionality
     function setupInfiniteScroll() {
-        const tableContainer = document.querySelector('.max-h-96.overflow-y-auto');
-        if (!tableContainer) {
-            console.warn('Table container not found for infinite scroll');
-            return;
+        const loadMoreBtn = document.getElementById('load-more-btn');
+        if (!loadMoreBtn) return;
+
+        // Clean up existing observer
+        if (window.scrollObserver) {
+            window.scrollObserver.disconnect();
         }
 
-        let scrollTimeout;
-        tableContainer.addEventListener('scroll', function() {
-            // Debounce scroll events
-            clearTimeout(scrollTimeout);
-            scrollTimeout = setTimeout(() => {
-                // Check if user has scrolled to near the bottom
-                const scrollTop = this.scrollTop;
-                const scrollHeight = this.scrollHeight;
-                const clientHeight = this.clientHeight;
-                
-                // Load more when user is within 50px of the bottom
-                if (scrollTop + clientHeight >= scrollHeight - 50) {
-                    if (hasMoreStudents && !isLoading) {
-                        console.log('Loading more students via infinite scroll');
-                        loadStudents(currentFilters, false); // Don't reset, just load more
-                    }
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && !isLoading && hasMoreStudents) {
+                    console.log('Load more button visible - auto loading students');
+                    loadStudents(currentFilters, false);
                 }
-            }, 100); // 100ms debounce
+            });
+        }, {
+            root: null,
+            rootMargin: '100px',
+            threshold: 0
         });
+
+        observer.observe(loadMoreBtn);
+        window.scrollObserver = observer;
     }
 
     // Setup infinite scroll after DOM is ready (with a small delay to ensure elements are rendered)
     setTimeout(() => {
         setupInfiniteScroll();
-    }, 100);
+    }, 500);
+
+    // Load more button event listener
+    const loadMoreBtn = document.getElementById('load-more-btn');
+    if (loadMoreBtn) {
+        loadMoreBtn.addEventListener('click', function() {
+            if (!isLoading && hasMoreStudents) {
+                console.log('Load more button clicked');
+                loadStudents(currentFilters, false);
+            }
+        });
+    }
+
+    // Reinitialize infinite scroll when pagination updates
+    function reinitializeInfiniteScroll() {
+        setTimeout(() => {
+            setupInfiniteScroll();
+        }, 100);
+    }
 
     // Make loadStudents available globally for retry button
     window.loadStudents = function() {

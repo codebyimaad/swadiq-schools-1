@@ -47,7 +47,7 @@ func LoginAPI(c *fiber.Ctx) error {
 
 	c.Cookie(&fiber.Cookie{
 		Name:     "session_id",
-		Value:    sessionID,
+		Value:    sessionID.String(),
 		Expires:  expiresAt,
 		HTTPOnly: true,
 		Secure:   false, // Set to true in production with HTTPS

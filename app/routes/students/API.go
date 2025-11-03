@@ -51,8 +51,8 @@ func GetStudentsTableAPI(c *fiber.Ctx) error {
 	gender := c.Query("gender")
 	dateFrom := c.Query("date_from")
 	dateTo := c.Query("date_to")
-	sortBy := c.Query("sort_by", "name")      // default to name
-	sortOrder := c.Query("sort_order", "asc") // default to ascending
+	sortBy := c.Query("sort_by", "student_id")  // default to student_id
+	sortOrder := c.Query("sort_order", "asc")    // default to ascending
 	
 	// Get pagination parameters
 	limit := c.QueryInt("limit", 10)  // default to 10 students per page

@@ -17,8 +17,8 @@ func CheckPasswordHash(password, hash string) bool {
 	return err == nil
 }
 
-func GenerateSessionID() string {
-	return uuid.New().String()
+func GenerateSessionID() uuid.UUID {
+	return uuid.New()
 }
 
 func GetSessionExpiry() time.Time {

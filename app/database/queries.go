@@ -86,7 +86,7 @@ func GetUserRoles(db *sql.DB, userID string) ([]*models.Role, error) {
 	return roles, nil
 }
 
-func CreateSession(db *sql.DB, sessionID string, userID string, expiresAt time.Time) error {
+func CreateSession(db *sql.DB, sessionID interface{}, userID string, expiresAt time.Time) error {
 	query := `INSERT INTO sessions (id, user_id, expires_at, created_at) VALUES ($1, $2, $3, $4)`
 	_, err := db.Exec(query, sessionID, userID, expiresAt, time.Now())
 	return err
@@ -1169,10 +1169,10 @@ func getStudentsWithFiltersInternal(db *sql.DB, filters StudentFilters, withPagi
 		baseQuery += " AND " + strings.Join(conditions, " AND ")
 	}
 
-	// Add sorting
-	sortBy := "s.first_name"
-	if filters.SortBy == "student_id" {
-		sortBy = "s.student_id"
+	// Add sorting - default to student_id for proper STU-2025-___ ordering
+	sortBy := "s.student_id"
+	if filters.SortBy == "name" {
+		sortBy = "s.first_name"
 	} else if filters.SortBy == "class" {
 		sortBy = "c.name"
 	}
@@ -1182,7 +1182,7 @@ func getStudentsWithFiltersInternal(db *sql.DB, filters StudentFilters, withPagi
 		sortOrder = "DESC"
 	}
 
-	baseQuery += fmt.Sprintf(" ORDER BY %s %s, s.last_name ASC", sortBy, sortOrder)
+	baseQuery += fmt.Sprintf(" ORDER BY %s %s, s.first_name ASC", sortBy, sortOrder)
 
 	// Add pagination if requested
 	if withPagination && filters.Limit > 0 {
