@@ -396,7 +396,7 @@ func GetClassSubjectsAPI(c *fiber.Ctx) error {
 	})
 }
 
-// AddClassSubjectsAPI adds subjects to a class
+// AddClassSubjectsAPI adds subjects to a class, along with papers and teachers
 func AddClassSubjectsAPI(c *fiber.Ctx) error {
 	classID := c.Params("id")
 	if classID == "" {
@@ -404,7 +404,7 @@ func AddClassSubjectsAPI(c *fiber.Ctx) error {
 	}
 
 	type AddSubjectsRequest struct {
-		Subjects []database.SubjectAssignment `json:"subjects"`
+		Subjects []database.SubjectAssignmentWithPapers `json:"subjects"`
 	}
 
 	var req AddSubjectsRequest
@@ -416,7 +416,7 @@ func AddClassSubjectsAPI(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "At least one subject is required"})
 	}
 
-	if err := database.AddSubjectsToClassWithCompulsory(config.GetDB(), classID, req.Subjects); err != nil {
+	if err := database.AddSubjectsToClassWithPapers(config.GetDB(), classID, req.Subjects); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to add subjects to class"})
 	}
 

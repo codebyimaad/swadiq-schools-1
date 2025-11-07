@@ -941,6 +941,65 @@ func AddSubjectsToClassWithCompulsory(db *sql.DB, classID string, subjects []Sub
 	return err
 }
 
+type PaperAssignmentForSubject struct {
+	PaperID   string  `json:"paper_id"`
+	TeacherID *string `json:"teacher_id"`
+}
+
+type SubjectAssignmentWithPapers struct {
+	SubjectID       string                      `json:"subject_id"`
+	IsCompulsory    bool                        `json:"is_compulsory"`
+	PaperAssignments []PaperAssignmentForSubject `json:"paper_assignments"`
+}
+
+func AddSubjectsToClassWithPapers(db *sql.DB, classID string, subjects []SubjectAssignmentWithPapers) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	for _, subject := range subjects {
+		// Add subject to class
+		query := `INSERT INTO class_subjects (class_id, subject_id, is_compulsory) 
+					VALUES ($1, $2, $3) 
+					ON CONFLICT (class_id, subject_id) 
+					DO UPDATE SET is_compulsory = EXCLUDED.is_compulsory, deleted_at = NULL`
+		_, err := tx.Exec(query, classID, subject.SubjectID, subject.IsCompulsory)
+		if err != nil {
+			return err
+		}
+
+		// Add paper assignments
+		for _, pa := range subject.PaperAssignments {
+			var existingID string
+			checkQuery := `SELECT id FROM class_papers WHERE class_id = $1 AND paper_id = $2 AND deleted_at IS NULL`
+			err := tx.QueryRow(checkQuery, classID, pa.PaperID).Scan(&existingID)
+
+			if err != nil {
+				// Create new class paper
+				insertQuery := `INSERT INTO class_papers (class_id, paper_id, teacher_id, created_at, updated_at)
+						  VALUES ($1, $2, $3, NOW(), NOW())`
+				_, err = tx.Exec(insertQuery, classID, pa.PaperID, pa.TeacherID)
+				if err != nil {
+					return err
+				}
+			} else {
+				// Update existing class paper
+				updateQuery := `UPDATE class_papers SET teacher_id = $1, updated_at = NOW() WHERE id = $2`
+				_, err = tx.Exec(updateQuery, pa.TeacherID, existingID)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return tx.Commit()
+}
+
+
+
 func GetClassSubjects(db *sql.DB, classID string) ([]*models.Subject, error) {
 	// Query to get subjects with their papers and teachers
 	query := `SELECT DISTINCT s.id, s.name, s.code, s.department_id, s.is_active, s.created_at, s.updated_at,

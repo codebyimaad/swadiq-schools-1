@@ -829,6 +829,18 @@
         const compulsoryRadio = document.querySelector(`input[name="compulsory_${selectedSubject}"]:checked`);
         const isCompulsory = compulsoryRadio ? compulsoryRadio.value === 'true' : true;
 
+        const paperAssignments = [];
+        const paperCheckboxes = document.querySelectorAll('#papersContainer .paper-checkbox:checked');
+        paperCheckboxes.forEach(checkbox => {
+            const paperId = checkbox.value;
+            const teacherBtn = document.querySelector(`.paper-teacher-btn[data-paper-id="${paperId}"]`);
+            const teacherId = teacherBtn ? teacherBtn.getAttribute('data-teacher-id') : null;
+            paperAssignments.push({
+                paper_id: paperId,
+                teacher_id: teacherId && teacherId !== '' ? teacherId : null,
+            });
+        });
+
         try {
             const response = await fetch(`/api/classes/${classID}/subjects`, {
                 method: 'POST',
@@ -836,7 +848,8 @@
                 body: JSON.stringify({ 
                     subjects: [{
                         subject_id: selectedSubject,
-                        is_compulsory: isCompulsory
+                        is_compulsory: isCompulsory,
+                        paper_assignments: paperAssignments,
                     }]
                 })
             });
