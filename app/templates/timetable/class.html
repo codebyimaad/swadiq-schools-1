@@ -249,6 +249,99 @@
         document.getElementById('settingsBtn').addEventListener('click', openSettingsModal);
         document.getElementById('editTimetableBtn').addEventListener('click', openEditTimetableModal);
         document.getElementById('printTimetableBtn').addEventListener('click', printTimetable);
+
+        const editContent = document.getElementById('editTimetableContent');
+        if (editContent) {
+            editContent.addEventListener('change', async (e) => {
+                if (e.target && e.target.dataset.field === 'subject') {
+                    const subjectSelect = e.target;
+                    const subjectId = subjectSelect.value;
+                    const time = subjectSelect.dataset.time;
+                    const day = subjectSelect.dataset.day;
+                    
+                    const paperSelect = document.querySelector(`select[data-time='${time}'][data-day='${day}'][data-field='paper']`);
+                    const teacherSelect = document.querySelector(`select[data-time='${time}'][data-day='${day}'][data-field='teacher']`);
+
+                    if (!paperSelect || !teacherSelect) return;
+
+                    teacherSelect.innerHTML = '<option value="">Select Teacher</option>';
+                    teacherSelect.disabled = true;
+
+                    paperSelect.innerHTML = '<option>Loading...</option>';
+                    paperSelect.disabled = true;
+
+                    if (!subjectId) {
+                        paperSelect.innerHTML = '<option value="">Select Paper</option>';
+                        paperSelect.disabled = true;
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(`/api/papers/subject/${subjectId}`);
+                        const data = await response.json();
+                        
+                        paperSelect.innerHTML = '<option value="">Select Paper</option>';
+                        if (data.papers) {
+                            data.papers.forEach(paper => {
+                                const option = document.createElement('option');
+                                option.value = paper.id;
+                                option.textContent = paper.name;
+                                paperSelect.appendChild(option);
+                            });
+                        }
+                    } catch (error) {
+                        console.error('Error fetching papers:', error);
+                        paperSelect.innerHTML = '<option value="">Error loading</option>';
+                    } finally {
+                        paperSelect.disabled = false;
+                    }
+                }
+
+                if (e.target && e.target.dataset.field === 'paper') {
+                    const paperSelect = e.target;
+                    const paperId = paperSelect.value;
+                    const time = paperSelect.dataset.time;
+                    const day = paperSelect.dataset.day;
+                    
+                    const teacherSelect = document.querySelector(`select[data-time='${time}'][data-day='${day}'][data-field='teacher']`);
+                    if (!teacherSelect) return;
+
+                    teacherSelect.innerHTML = '<option>Loading...</option>';
+                    teacherSelect.disabled = true;
+
+                    if (!paperId) {
+                        teacherSelect.innerHTML = '<option value="">Select Teacher</option>';
+                        teacherSelect.disabled = true;
+                        return;
+                    }
+
+                    let url = '/api/teachers/for-timetable';
+                    if (paperId) {
+                        url += `?paper_id=${paperId}`;
+                    }
+
+                    try {
+                        const response = await fetch(url);
+                        const data = await response.json();
+                        
+                        teacherSelect.innerHTML = '<option value="">Select Teacher</option>';
+                        if (data.teachers) {
+                            data.teachers.forEach(teacher => {
+                                const option = document.createElement('option');
+                                option.value = teacher.id;
+                                option.textContent = `${teacher.first_name} ${teacher.last_name}`;
+                                teacherSelect.appendChild(option);
+                            });
+                        }
+                    } catch (error) {
+                        console.error('Error fetching teachers:', error);
+                        teacherSelect.innerHTML = '<option value="">Error loading</option>';
+                    } finally {
+                        teacherSelect.disabled = false;
+                    }
+                }
+            });
+        }
     });
 
     async function loadTimetable() {
@@ -305,7 +398,7 @@
                             return `
                                 <td class="px-4 py-4">
                                     <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                        <div class="font-medium text-blue-900">${entry.subject_name}</div>
+                                        <div class="font-medium text-blue-900">${entry.paper_name}</div>
                                         <div class="text-sm text-blue-700">${entry.teacher_name || 'No teacher assigned'}</div>
                                         <div class="text-xs text-blue-600">${entry.room || 'No room assigned'}</div>
                                     </div>
@@ -336,31 +429,19 @@
         content.innerHTML = '<div class="text-center py-4">Loading...</div>';
         
         try {
-            // Load papers, subjects and teachers for this class
-            const [papersResponse, subjectsResponse, teachersResponse] = await Promise.all([
-                fetch(`/api/classes/${classID}/papers`),
-                fetch(`/api/classes/${classID}/subjects`),
-                fetch('/api/teachers')
-            ]);
+            // Load subjects for this class
+            const subjectsResponse = await fetch(`/api/classes/${classID}/subjects`);
             
-            const papersData = await papersResponse.json();
             const subjectsData = await subjectsResponse.json();
-            const teachersData = await teachersResponse.json();
             
-            console.log('Papers data:', papersData);
             console.log('Subjects data:', subjectsData);
-            console.log('Teachers data:', teachersData);
             
-            const papers = Array.isArray(papersData) ? papersData : (papersData.papers || []);
             const subjects = subjectsData.subjects || [];
-            const teachers = teachersData.teachers || [];
             
-            console.log('Parsed papers:', papers);
             console.log('Parsed subjects:', subjects);
-            console.log('Parsed teachers:', teachers);
             
             // Create edit form
-            content.innerHTML = createEditTimetableForm(papers, subjects, teachers);
+            content.innerHTML = createEditTimetableForm(subjects);
         } catch (error) {
             console.error('Error loading edit form:', error);
             content.innerHTML = '<div class="text-red-500 text-center py-4">Error loading form</div>';
@@ -425,29 +506,9 @@
         return schedule;
     }
 
-    function createEditTimetableForm(papers, subjects, teachers) {
+    function createEditTimetableForm(subjects) {
         const schedule = generateSchedule();
         
-        // Combine papers and subjects for the dropdown
-        console.log('Creating options from papers:', papers);
-        console.log('Creating options from subjects:', subjects);
-        
-        const allOptions = [
-            ...papers.map(paper => ({ 
-                id: paper.id, 
-                name: `${paper.name} (Paper)`, 
-                type: 'paper',
-                subject: paper.subject ? paper.subject.name : 'Unknown Subject'
-            })),
-            ...subjects.map(subject => ({ 
-                id: subject.id, 
-                name: `${subject.name} (Subject)`, 
-                type: 'subject'
-            }))
-        ];
-        
-        console.log('All options created:', allOptions);
-
         return `
             <div class="overflow-x-auto">
                 <table class="w-full border border-gray-200">
@@ -478,12 +539,14 @@
                                             <td class="px-4 py-3">
                                                 <div class="space-y-2">
                                                     <select class="w-full text-sm border border-gray-300 rounded px-2 py-1" data-time="${slot.time}" data-day="${day}" data-field="subject">
-                                                        <option value="">Select Paper/Subject</option>
-                                                        ${allOptions.map(option => `<option value="${option.id}" data-type="${option.type}">${option.name}</option>`).join('')}
+                                                        <option value="">Select Subject</option>
+                                                        ${subjects.map(subject => `<option value="${subject.id}">${subject.name}</option>`).join('')}
                                                     </select>
-                                                    <select class="w-full text-sm border border-gray-300 rounded px-2 py-1" data-time="${slot.time}" data-day="${day}" data-field="teacher">
+                                                    <select class="w-full text-sm border border-gray-300 rounded px-2 py-1" data-time="${slot.time}" data-day="${day}" data-field="paper" disabled>
+                                                        <option value="">Select Paper</option>
+                                                    </select>
+                                                    <select class="w-full text-sm border border-gray-300 rounded px-2 py-1" data-time="${slot.time}" data-day="${day}" data-field="teacher" disabled>
                                                         <option value="">Select Teacher</option>
-                                                        ${teachers.map(teacher => `<option value="${teacher.id}">${teacher.first_name} ${teacher.last_name}</option>`).join('')}
                                                     </select>
                                                 </div>
                                             </td>
@@ -790,16 +853,16 @@
                     entries[key] = { time_slot: time, day: day };
                 }
                 
-                if (field === 'subject') {
-                    entries[key].subject_id = element.value;
+                if (field === 'paper') {
+                    entries[key].paper_id = element.value;
                 } else if (field === 'teacher') {
                     entries[key].teacher_id = element.value;
                 }
             });
             
-            // Only include entries with at least a subject
+            // Only include entries with at least a paper
             Object.values(entries).forEach(entry => {
-                if (entry.subject_id) {
+                if (entry.paper_id) {
                     timetableData.push(entry);
                 }
             });

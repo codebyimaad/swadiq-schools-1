@@ -214,10 +214,6 @@ func GetAllTeachers(db *sql.DB) ([]*models.User, error) {
 			}
 		}
 
-		// Load departments for this teacher
-		departments, _ := GetUserDepartments(db, teacher.ID)
-		teacher.Departments = departments
-
 		teachers = append(teachers, teacher)
 	}
 
@@ -231,10 +227,11 @@ func GetAllTeachers(db *sql.DB) ([]*models.User, error) {
 // GetTeacherCountsByRole gets teacher counts grouped by role
 func GetTeacherCountsByRole(db *sql.DB) (map[string]int, error) {
 	query := `SELECT r.name, COUNT(DISTINCT u.id) as count
-			  FROM roles r
-			  LEFT JOIN user_roles ur ON r.id = ur.role_id
-			  LEFT JOIN users u ON ur.user_id = u.id AND u.is_active = true
+			  FROM users u
+			  INNER JOIN user_roles ur ON u.id = ur.user_id
+			  INNER JOIN roles r ON ur.role_id = r.id
 			  WHERE r.name IN ('admin', 'head_teacher', 'class_teacher', 'subject_teacher')
+			  AND u.is_active = true
 			  GROUP BY r.name`
 
 	rows, err := db.Query(query)
@@ -254,6 +251,49 @@ func GetTeacherCountsByRole(db *sql.DB) (map[string]int, error) {
 
 	return counts, nil
 }
+
+func GetTeachersBySubjectOrPaper(db *sql.DB, subjectID, paperID string) ([]*models.User, error) {
+	var query string
+	var args []interface{}
+
+	baseQuery := `SELECT DISTINCT u.id, u.first_name, u.last_name, u.email
+				  FROM users u
+				  INNER JOIN teacher_subjects ts ON u.id = ts.teacher_id
+				  WHERE u.is_active = true`
+
+	if paperID != "" {
+		query = baseQuery + " AND ts.paper_id = $1 ORDER BY u.first_name"
+		args = append(args, paperID)
+	} else if subjectID != "" {
+		query = baseQuery + " AND ts.subject_id = $1 ORDER BY u.first_name"
+		args = append(args, subjectID)
+	} else {
+		// No filter, return all teachers with roles
+		query = `SELECT u.id, u.first_name, u.last_name, u.email
+				 FROM users u
+				 INNER JOIN user_roles ur ON u.id = ur.user_id
+				 INNER JOIN roles r ON ur.role_id = r.id
+				 WHERE u.is_active = true AND r.name IN ('class_teacher', 'subject_teacher', 'head_teacher', 'admin')
+				 ORDER BY u.first_name`
+	}
+
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var teachers []*models.User
+	for rows.Next() {
+		teacher := &models.User{}
+		if err := rows.Scan(&teacher.ID, &teacher.FirstName, &teacher.LastName, &teacher.Email); err != nil {
+			return nil, err
+		}
+		teachers = append(teachers, teacher)
+	}
+	return teachers, nil
+}
+
 
 // SearchTeachersWithPagination searches teachers with pagination
 func SearchTeachersWithPagination(db *sql.DB, searchTerm string, limit, offset int) ([]*models.User, int, error) {
@@ -585,7 +625,7 @@ func GetUserDepartments(db *sql.DB, userID string) ([]*models.Department, error)
 
 	rows, err := db.Query(query, userID)
 	if err != nil {
-		return []*models.Department{}, nil
+		return []*models.Department{}, err
 	}
 	defer rows.Close()
 

@@ -65,6 +65,20 @@ func GetTeachersForSelectionAPI(c *fiber.Ctx) error {
 	})
 }
 
+func GetTeachersForTimetableAPI(c *fiber.Ctx) error {
+	subjectID := c.Query("subject_id")
+	paperID := c.Query("paper_id")
+
+	teachers, err := database.GetTeachersBySubjectOrPaper(config.GetDB(), subjectID, paperID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Database error"})
+	}
+
+	return c.JSON(fiber.Map{
+		"teachers": teachers,
+	})
+}
+
 func GetTeacherCountsAPI(c *fiber.Ctx) error {
 	counts, err := database.GetTeacherCountsByRole(config.GetDB())
 	if err != nil {

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func LoginAPI(c *fiber.Ctx) error {
@@ -30,6 +31,19 @@ func LoginAPI(c *fiber.Ctx) error {
 
 	if !CheckPasswordHash(req.Password, user.Password) {
 		return c.Status(401).JSON(fiber.Map{"error": "Invalid credentials"})
+	}
+
+	// Check hash cost and re-hash if necessary to migrate to a new cost
+	cost, err := bcrypt.Cost([]byte(user.Password))
+	if err == nil && cost != bcrypt.DefaultCost {
+		newHash, err := HashPassword(req.Password)
+		if err == nil {
+			// This update can happen in the background.
+			// For now, we'll do it synchronously.
+			// We will ignore the error for now, as the user is already logged in.
+			// In a production system, this should be logged.
+			_ = database.UpdateUserPassword(config.GetDB(), user.ID, newHash)
+		}
 	}
 
 	roles, err := database.GetUserRoles(config.GetDB(), user.ID)

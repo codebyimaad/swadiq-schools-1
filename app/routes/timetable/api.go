@@ -2,6 +2,7 @@ package timetable
 
 import (
 	"fmt"
+	"log"
 	"swadiq-schools/app/config"
 
 	"github.com/gofiber/fiber/v2"
@@ -133,15 +134,118 @@ func DeleteTimetableEntryAPI(c *fiber.Ctx) error {
 }
 
 func GetClassTimetableAPI(c *fiber.Ctx) error {
-	// TODO: Implement timetable retrieval logic
+	classID := c.Params("id")
+	if classID == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Class ID is required"})
+	}
+
+	db := config.GetDB()
+	query := `
+		SELECT te.id, te.day_of_week, te.start_time, te.end_time,
+			   s.name as subject_name, p.name as paper_name,
+			   t.first_name || ' ' || t.last_name as teacher_name
+		FROM timetable_entries te
+		LEFT JOIN papers p ON te.paper_id = p.id
+		LEFT JOIN subjects s ON te.subject_id = s.id
+		LEFT JOIN users t ON te.teacher_id = t.id
+		WHERE te.class_id = $1 AND te.is_active = true
+		ORDER BY te.start_time, te.day_of_week
+	`
+
+	rows, err := db.Query(query, classID)
+	if err != nil {
+		log.Printf("Error fetching timetable: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch timetable", "details": err.Error()})
+	}
+	defer rows.Close()
+
+	var timetable []fiber.Map
+	for rows.Next() {
+		var id, day, startTime, endTime, subjectName, paperName, teacherName string
+		if err := rows.Scan(&id, &day, &startTime, &endTime, &subjectName, &paperName, &teacherName); err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to scan timetable entry", "details": err.Error()})
+		}
+		timetable = append(timetable, fiber.Map{
+			"id":           id,
+			"day":          day,
+			"time_slot":    fmt.Sprintf("%s - %s", startTime, endTime),
+			"subject_name": subjectName,
+			"paper_name":   paperName,
+			"teacher_name": teacherName,
+		})
+	}
+
 	return c.JSON(fiber.Map{
 		"success":   true,
-		"timetable": []interface{}{},
+		"timetable": timetable,
 	})
 }
 
 func SaveClassTimetableAPI(c *fiber.Ctx) error {
-	// TODO: Implement timetable saving logic
+	classID := c.Params("classId")
+	if classID == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Class ID is required"})
+	}
+
+	type TimetableEntry struct {
+		TimeSlot  string `json:"time_slot"`
+		Day       string `json:"day"`
+		PaperID   string `json:"paper_id"`
+		TeacherID string `json:"teacher_id"`
+	}
+
+	type TimetableRequest struct {
+		Timetable []TimetableEntry `json:"timetable"`
+	}
+
+	var req TimetableRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	db := config.GetDB()
+	tx, err := db.Begin()
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to start transaction"})
+	}
+	defer tx.Rollback()
+
+	// Delete existing timetable for the class
+	if _, err := tx.Exec("DELETE FROM timetable_entries WHERE class_id = $1", classID); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to clear existing timetable"})
+	}
+
+	for _, entry := range req.Timetable {
+		if entry.PaperID == "" {
+			continue // Skip entries without a paper
+		}
+
+		// Get subject_id from paper
+		var subjectID string
+		err := tx.QueryRow("SELECT subject_id FROM papers WHERE id = $1", entry.PaperID).Scan(&subjectID)
+		if err != nil {
+			// If paper is not found, we can either skip or return an error
+			// For now, let's skip it
+			continue
+		}
+
+		query := `INSERT INTO timetable_entries (class_id, subject_id, paper_id, teacher_id, day_of_week, start_time, end_time, is_active, created_at, updated_at)
+				  VALUES ($1, $2, $3, $4, $5, $6, $7, true, NOW(), NOW())`
+
+		// Extract start and end times from time_slot
+		var startTime, endTime string
+		fmt.Sscanf(entry.TimeSlot, "%s - %s", &startTime, &endTime)
+
+		_, err = tx.Exec(query, classID, subjectID, entry.PaperID, entry.TeacherID, entry.Day, startTime, endTime)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to create timetable entry", "details": err.Error()})
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to commit transaction"})
+	}
+
 	return c.JSON(fiber.Map{
 		"success": true,
 		"message": "Timetable saved successfully",
