@@ -448,10 +448,11 @@ function closeViewModal() {
 }
 
 // Function to show classes modal
-function showClassesModal(teacherName, classes, event) {
+function showClassesModal(button, teacherName, event) {
     const modal = document.getElementById('classesModal');
     const title = document.getElementById('classesModalTitle');
     const classesList = document.getElementById('classesList');
+    const classes = JSON.parse(button.dataset.classes);
     
     title.textContent = `${teacherName}'s Classes`;
     
@@ -950,7 +951,7 @@ function loadTeachers() {
                         </td>
                         <td class="px-4 py-3">
                             ${teacher.classes && teacher.classes.length > 0
-                                ? `<button class="text-blue-600 hover:text-blue-800 font-medium cursor-pointer whitespace-nowrap" onclick="showClassesModal('${teacher.first_name} ${teacher.last_name}', ${JSON.stringify(teacher.classes).replace(/"/g, '&quot;')}, event)">${teacher.classes.length} ${teacher.classes.length === 1 ? 'Class' : 'Classes'}</button>`
+                                ? `<button class="text-blue-600 hover:text-blue-800 font-medium cursor-pointer whitespace-nowrap" onclick="showClassesModal(this, '${teacher.first_name} ${teacher.last_name}', event)" data-classes='${JSON.stringify(teacher.classes)}'>${teacher.classes.length} ${teacher.classes.length === 1 ? 'Class' : 'Classes'}</button>`
                                 : '<span class="text-xs text-gray-500">No Classes</span>'
                             }
                         </td>
