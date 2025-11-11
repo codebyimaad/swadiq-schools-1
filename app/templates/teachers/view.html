@@ -87,7 +87,21 @@
             </div>
             {{end}}
 
-
+            <!-- Teacher Availability -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mt-6">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">Weekly Availability</h2>
+                        <p class="text-sm text-gray-500 mt-1">Set working hours for each day of the week</p>
+                    </div>
+                    <button id="saveAvailabilityBtn" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 text-sm font-medium shadow-sm">
+                        <i class="fas fa-save mr-2"></i>Save Changes
+                    </button>
+                </div>
+                <div id="availabilityGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-3">
+                    <!-- Availability cards will be injected here by JavaScript -->
+                </div>
+            </div>
         </div>
 
         <!-- Quick Stats -->
@@ -187,9 +201,24 @@
 
 <script>
 const teacherID = '{{.teacherID}}';
+const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const displayDayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+// Helper function to format time range
+function formatTimeRange(startTime, endTime) {
+    const formatTime = (time) => {
+        const [hours, minutes] = time.split(':');
+        const hour = parseInt(hours);
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const displayHour = hour % 12 || 12;
+        return `${displayHour}:${minutes} ${ampm}`;
+    };
+    return `${formatTime(startTime)} - ${formatTime(endTime)}`;
+}
 
 document.addEventListener('DOMContentLoaded', function() {
     loadTeacherData();
+    loadTeacherAvailability();
     
     // Modal event listeners
     document.getElementById('assignSubjectsBtn').addEventListener('click', openAssignSubjectsModal);
@@ -223,6 +252,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
+
+    // Event listener for saving availability
+    document.getElementById('saveAvailabilityBtn').addEventListener('click', handleSaveAvailability);
 });
 
 async function loadTeacherData() {
@@ -369,6 +401,181 @@ async function loadTeacherSubjects() {
     }
 }
 
+async function loadTeacherAvailability() {
+    try {
+        const response = await fetch(`/api/teachers/${teacherID}/availability`);
+        const data = await response.json();
+        
+        const availabilityGrid = document.getElementById('availabilityGrid');
+        availabilityGrid.innerHTML = ''; // Clear existing cards
+
+        const availabilityMap = new Map();
+        (data.availability || []).forEach(item => {
+            availabilityMap.set(item.day_of_week, item);
+        });
+
+        for (let i = 0; i < 7; i++) {
+            const dbDayOfWeek = (i + 1) % 7; // Map display order (0=Mon, 6=Sun) to DB day_of_week (0=Sun, 6=Sat)
+            const dayAvailability = availabilityMap.get(dbDayOfWeek) || {
+                day_of_week: dbDayOfWeek,
+                is_available: false,
+                start_time: { String: '', Valid: false },
+                end_time: { String: '', Valid: false }
+            };
+
+            const card = document.createElement('div');
+            const isAvailable = dayAvailability.is_available;
+            card.className = `relative p-3 rounded-lg border transition-all duration-200 ${isAvailable ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'}`;
+            
+            card.innerHTML = `
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-2 h-2 rounded-full ${isAvailable ? 'bg-green-500' : 'bg-gray-300'} transition-colors duration-200"></div>
+                        <h3 class="font-medium text-gray-900 text-sm">${displayDayNames[i]}</h3>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" class="availability-checkbox sr-only peer" 
+                               data-day-of-week="${dbDayOfWeek}" ${isAvailable ? 'checked' : ''}>
+                        <div class="relative w-10 h-5 bg-gray-200 rounded-full peer peer-focus:ring-2 peer-focus:ring-green-300 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-600"></div>
+                    </label>
+                </div>
+                <div class="time-inputs space-y-2 ${isAvailable ? '' : 'opacity-40 pointer-events-none'}">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">Start</label>
+                            <input type="time" class="availability-start-time w-full px-2 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-green-500 focus:border-green-500 text-xs bg-white" 
+                                   data-day-of-week="${dbDayOfWeek}" value="${dayAvailability.start_time.String || ''}" ${!isAvailable ? 'disabled' : ''}>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">End</label>
+                            <input type="time" class="availability-end-time w-full px-2 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-green-500 focus:border-green-500 text-xs bg-white" 
+                                   data-day-of-week="${dbDayOfWeek}" value="${dayAvailability.end_time.String || ''}" ${!isAvailable ? 'disabled' : ''}>
+                        </div>
+                    </div>
+                    ${isAvailable && dayAvailability.start_time.String && dayAvailability.end_time.String ? `
+                        <div class="text-xs text-gray-500 bg-white px-2 py-1 rounded text-center">
+                            <i class="fas fa-clock mr-1"></i>
+                            ${formatTimeRange(dayAvailability.start_time.String, dayAvailability.end_time.String)}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            availabilityGrid.appendChild(card);
+
+            // Add event listener for checkbox to toggle time inputs and card style
+            const checkbox = card.querySelector('.availability-checkbox');
+            const timeInputsContainer = card.querySelector('.time-inputs');
+            const startTimeInput = card.querySelector('.availability-start-time');
+            const endTimeInput = card.querySelector('.availability-end-time');
+
+            checkbox.addEventListener('change', function() {
+                const isChecked = this.checked;
+                const statusDot = card.querySelector('.w-2');
+                
+                // Update card styling
+                if (isChecked) {
+                    card.className = 'relative p-3 rounded-lg border transition-all duration-200 border-green-200 bg-green-50';
+                    statusDot.className = 'w-2 h-2 rounded-full bg-green-500 transition-colors duration-200';
+                } else {
+                    card.className = 'relative p-3 rounded-lg border transition-all duration-200 border-gray-200 bg-gray-50';
+                    statusDot.className = 'w-2 h-2 rounded-full bg-gray-300 transition-colors duration-200';
+                }
+                
+                // Update time inputs
+                timeInputsContainer.classList.toggle('opacity-40', !isChecked);
+                timeInputsContainer.classList.toggle('pointer-events-none', !isChecked);
+                startTimeInput.disabled = !isChecked;
+                endTimeInput.disabled = !isChecked;
+                
+                if (!isChecked) {
+                    startTimeInput.value = '';
+                    endTimeInput.value = '';
+                } else {
+                    // Set default times when enabling
+                    if (!startTimeInput.value) startTimeInput.value = '08:00';
+                    if (!endTimeInput.value) endTimeInput.value = '17:00';
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Error loading teacher availability:', error);
+        document.getElementById('availabilityGrid').innerHTML = `<p class="text-red-500">Error loading availability</p>`;
+    }
+}
+
+async function handleSaveAvailability() {
+    const saveBtn = document.getElementById('saveAvailabilityBtn');
+    const originalText = saveBtn.innerHTML;
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Saving...';
+
+    const availabilityData = [];
+    const cards = document.querySelectorAll('#availabilityGrid > div');
+
+    let validationError = false;
+
+    cards.forEach(card => {
+        if (validationError) return;
+
+        const checkbox = card.querySelector('.availability-checkbox');
+        const startTimeInput = card.querySelector('.availability-start-time');
+        const endTimeInput = card.querySelector('.availability-end-time');
+
+        const dayOfWeek = parseInt(checkbox.dataset.dayOfWeek); // This is already the DB day_of_week
+        const isAvailable = checkbox.checked;
+        let startTime = startTimeInput.value || null;
+        let endTime = endTimeInput.value || null;
+
+        if (isAvailable) {
+            if (!startTime || !endTime) {
+                alert(`Please enter both start and end times for ${displayDayNames[dayOfWeek === 0 ? 6 : dayOfWeek - 1]}.`); // Adjust for alert message
+                validationError = true;
+                return;
+            }
+            if (startTime >= endTime) {
+                alert(`Start time must be before end time for ${displayDayNames[dayOfWeek === 0 ? 6 : dayOfWeek - 1]}.`); // Adjust for alert message
+                validationError = true;
+                return;
+            }
+        }
+
+        availabilityData.push({
+            day_of_week: dayOfWeek,
+            is_available: isAvailable,
+            start_time: startTime,
+            end_time: endTime
+        });
+    });
+
+    if (validationError) {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalText;
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/teachers/${teacherID}/availability`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ availability: availabilityData })
+        });
+
+        if (response.ok) {
+            alert('Teacher availability updated successfully!');
+            loadTeacherAvailability();
+        } else {
+            const error = await response.json();
+            alert('Error: ' + (error.error || 'Failed to update availability'));
+        }
+    } catch (error) {
+        console.error('Error saving availability:', error);
+        alert('An error occurred while saving availability');
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalText;
+    }
+}
 
 
 function openAssignSubjectsModal() {

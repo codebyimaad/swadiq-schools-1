@@ -2123,3 +2123,80 @@ func removeClassTeacherRoleInDB(tx *sql.Tx, userID string) error {
 	_, err = tx.Exec("DELETE FROM user_roles WHERE user_id = $1 AND role_id = $2", userID, roleID)
 	return err
 }
+
+// GetTeacherAvailability retrieves the availability for a specific teacher
+func GetTeacherAvailability(db *sql.DB, teacherID string) ([]*models.TeacherAvailability, error) {
+	query := `SELECT id, teacher_id, day_of_week, is_available, 
+			  to_char(start_time, 'HH24:MI') as start_time, 
+			  to_char(end_time, 'HH24:MI') as end_time, 
+			  created_at, updated_at
+			  FROM teacher_availability
+			  WHERE teacher_id = $1
+			  ORDER BY day_of_week`
+
+	rows, err := db.Query(query, teacherID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var availability []*models.TeacherAvailability
+	for rows.Next() {
+		item := &models.TeacherAvailability{}
+		err := rows.Scan(
+			&item.ID, &item.TeacherID, &item.DayOfWeek, &item.IsAvailable,
+			&item.StartTime, &item.EndTime, &item.CreatedAt, &item.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		availability = append(availability, item)
+	}
+
+	return availability, nil
+}
+
+// UpdateTeacherAvailability updates or inserts the availability for a teacher for multiple days
+func UpdateTeacherAvailability(db *sql.DB, teacherID string, availability []*models.TeacherAvailability) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	stmt, err := tx.Prepare(`
+		INSERT INTO teacher_availability (teacher_id, day_of_week, is_available, start_time, end_time)
+		VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (teacher_id, day_of_week) DO UPDATE SET
+			is_available = EXCLUDED.is_available,
+			start_time = EXCLUDED.start_time,
+			end_time = EXCLUDED.end_time,
+			updated_at = NOW()
+	`)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	for _, item := range availability {
+		// Handle nullable time values
+		var startTime, endTime interface{}
+		if item.StartTime.Valid {
+			startTime = item.StartTime.String
+		} else {
+			startTime = nil
+		}
+		if item.EndTime.Valid {
+			endTime = item.EndTime.String
+		} else {
+			endTime = nil
+		}
+
+		_, err := stmt.Exec(teacherID, item.DayOfWeek, item.IsAvailable, startTime, endTime)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}

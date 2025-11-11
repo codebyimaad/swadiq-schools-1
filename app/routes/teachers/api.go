@@ -1,6 +1,8 @@
 package teachers
 
 import (
+	"database/sql"
+	"fmt"
 	"swadiq-schools/app/config"
 	"swadiq-schools/app/database"
 	"swadiq-schools/app/models"
@@ -562,8 +564,87 @@ func AssignTeacherSubjectsAPI(c *fiber.Ctx) error {
 	})
 }
 
+func GetTeacherAvailabilityAPI(c *fiber.Ctx) error {
+	teacherID := c.Params("id")
+	if teacherID == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Teacher ID is required"})
+	}
 
+	availability, err := database.GetTeacherAvailability(config.GetDB(), teacherID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to get teacher availability"})
+	}
 
+	// If no availability is found, return a default schedule for all 7 days
+	if len(availability) == 0 {
+		defaultAvailability := make([]*models.TeacherAvailability, 7)
+		for i := 0; i < 7; i++ {
+			defaultAvailability[i] = &models.TeacherAvailability{
+				TeacherID:   teacherID,
+				DayOfWeek:   i,
+				IsAvailable: false,
+				StartTime:   sql.NullString{},
+				EndTime:     sql.NullString{},
+			}
+		}
+		return c.JSON(fiber.Map{
+			"availability": defaultAvailability,
+		})
+	}
 
+	return c.JSON(fiber.Map{
+		"availability": availability,
+	})
+}
 
+func UpdateTeacherAvailabilityAPI(c *fiber.Ctx) error {
+	teacherID := c.Params("id")
+	if teacherID == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Teacher ID is required"})
+	}
 
+	type AvailabilityRequestItem struct {
+		DayOfWeek   int     `json:"day_of_week"`
+		IsAvailable bool    `json:"is_available"`
+		StartTime   *string `json:"start_time"`
+		EndTime     *string `json:"end_time"`
+	}
+
+	type UpdateAvailabilityRequest struct {
+		Availability []*AvailabilityRequestItem `json:"availability"`
+	}
+
+	var req UpdateAvailabilityRequest
+	if err := c.BodyParser(&req); err != nil {
+		fmt.Println("BodyParser error:", err)
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request payload"})
+	}
+
+	// Convert to []*models.TeacherAvailability
+	availabilityToUpdate := make([]*models.TeacherAvailability, len(req.Availability))
+	for i, item := range req.Availability {
+		availabilityToUpdate[i] = &models.TeacherAvailability{
+			DayOfWeek:   item.DayOfWeek,
+			IsAvailable: item.IsAvailable,
+			StartTime:   sql.NullString{String: "", Valid: false},
+			EndTime:     sql.NullString{String: "", Valid: false},
+		}
+		if item.StartTime != nil {
+			availabilityToUpdate[i].StartTime.String = *item.StartTime
+			availabilityToUpdate[i].StartTime.Valid = true
+		}
+		if item.EndTime != nil {
+			availabilityToUpdate[i].EndTime.String = *item.EndTime
+			availabilityToUpdate[i].EndTime.Valid = true
+		}
+	}
+
+	err := database.UpdateTeacherAvailability(config.GetDB(), teacherID, availabilityToUpdate)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to update teacher availability"})
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "Teacher availability updated successfully",
+	})
+}
