@@ -18,6 +18,7 @@ type FeeTypeResponse struct {
 	Amount           int       `json:"amount"`
 	PaymentFrequency string    `json:"payment_frequency"`
 	IsActive         bool      `json:"is_active"`
+	IsRequired       bool      `json:"is_required"`
 	Scope            string    `json:"scope"`
 	TargetClassID    *string   `json:"target_class_id"`
 	TargetStudentID  *string   `json:"target_student_id"`
@@ -184,6 +185,167 @@ func CreateFeeTypeAPI(c *fiber.Ctx, db *sql.DB) error {
 		"success": true,
 		"data":    feeType,
 		"message": "Fee type created successfully",
+	})
+}
+
+// GetFeeTypeAPI returns a single fee type by ID
+func GetFeeTypeAPI(c *fiber.Ctx, db *sql.DB) error {
+	feeTypeID := c.Params("id")
+	
+	query := `SELECT id, name, code, description, COALESCE(amount, 0) as amount,
+			  COALESCE(payment_frequency, 'per_term') as payment_frequency,
+			  is_active, COALESCE(scope, 'manual') as scope, is_required,
+			  created_at, updated_at
+			  FROM fee_types WHERE id = $1 AND deleted_at IS NULL`
+	
+	var feeType FeeTypeResponse
+	err := db.QueryRow(query, feeTypeID).Scan(
+		&feeType.ID, &feeType.Name, &feeType.Code, &feeType.Description, &feeType.Amount,
+		&feeType.PaymentFrequency, &feeType.IsActive, &feeType.Scope, &feeType.IsRequired,
+		&feeType.CreatedAt, &feeType.UpdatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return c.Status(404).JSON(fiber.Map{"success": false, "error": "Fee type not found"})
+		}
+		return c.Status(500).JSON(fiber.Map{"success": false, "error": "Failed to fetch fee type"})
+	}
+	
+	// Get current assignments
+	assignQuery := `SELECT 
+					COALESCE(array_agg(DISTINCT c.id) FILTER (WHERE c.id IS NOT NULL), '{}') as class_ids,
+					COALESCE(array_agg(DISTINCT s.id) FILTER (WHERE s.id IS NOT NULL), '{}') as student_ids
+					FROM fee_type_assignments fta
+					LEFT JOIN classes c ON fta.class_id = c.id
+					LEFT JOIN students s ON fta.student_id = s.id
+					WHERE fta.fee_type_id = $1`
+	
+	var classIDs, studentIDs string
+	db.QueryRow(assignQuery, feeTypeID).Scan(&classIDs, &studentIDs)
+	
+	// Parse class IDs
+	if classIDs != "{}" && classIDs != "" {
+		classIDs = strings.Trim(classIDs, "{}")
+		if classIDs != "" {
+			feeType.TargetClassID = &classIDs
+		}
+	}
+	
+	// Parse student IDs
+	if studentIDs != "{}" && studentIDs != "" {
+		studentIDs = strings.Trim(studentIDs, "{}")
+		if studentIDs != "" {
+			feeType.TargetStudentID = &studentIDs
+		}
+	}
+	
+	return c.JSON(fiber.Map{
+		"success": true,
+		"data":    feeType,
+	})
+}
+
+// UpdateFeeTypeAPI updates an existing fee type
+func UpdateFeeTypeAPI(c *fiber.Ctx, db *sql.DB) error {
+	feeTypeID := c.Params("id")
+	
+	type UpdateFeeTypeRequest struct {
+		Name             string `json:"name"`
+		Code             string `json:"code"`
+		Description      string `json:"description"`
+		Amount           string `json:"amount"`
+		PaymentFrequency string `json:"payment_frequency"`
+		IsRequired       string `json:"is_required"`
+		IsActive         string `json:"is_active"`
+		Scope            string `json:"scope"`
+		TargetClassID    string `json:"target_class_id"`
+		TargetStudentID  string `json:"target_student_id"`
+	}
+	
+	var req UpdateFeeTypeRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"success": false, "error": "Invalid request"})
+	}
+	
+	if req.Name == "" || req.Code == "" {
+		return c.Status(400).JSON(fiber.Map{"success": false, "error": "Name and code are required"})
+	}
+	
+	amount, err := strconv.Atoi(req.Amount)
+	if err != nil || amount < 0 {
+		return c.Status(400).JSON(fiber.Map{"success": false, "error": "Valid amount is required"})
+	}
+	
+	isRequired := req.IsRequired == "true"
+	isActive := req.IsActive == "true"
+	scope := req.Scope
+	if scope == "" {
+		scope = "manual"
+	}
+	
+	query := `UPDATE fee_types SET name = $1, code = $2, description = $3, amount = $4,
+			  payment_frequency = $5, is_required = $6, is_active = $7, scope = $8, updated_at = NOW()
+			  WHERE id = $9 AND deleted_at IS NULL`
+	
+	result, err := db.Exec(query, req.Name, req.Code, req.Description, amount,
+		req.PaymentFrequency, isRequired, isActive, scope, feeTypeID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"success": false, "error": "Failed to update fee type"})
+	}
+	
+	rowsAffected, err := result.RowsAffected()
+	if err != nil || rowsAffected == 0 {
+		return c.Status(404).JSON(fiber.Map{"success": false, "error": "Fee type not found"})
+	}
+	
+	// Update assignments
+	db.Exec(`DELETE FROM fee_type_assignments WHERE fee_type_id = $1`, feeTypeID)
+	
+	if scope == "class" && req.TargetClassID != "" {
+		classIDs := strings.Split(req.TargetClassID, ",")
+		for _, classID := range classIDs {
+			if strings.TrimSpace(classID) != "" {
+				db.Exec(`INSERT INTO fee_type_assignments (fee_type_id, class_id) VALUES ($1, $2)`, feeTypeID, strings.TrimSpace(classID))
+			}
+		}
+	} else if scope == "student" && req.TargetStudentID != "" {
+		studentIDs := strings.Split(req.TargetStudentID, ",")
+		for _, studentID := range studentIDs {
+			if strings.TrimSpace(studentID) != "" {
+				db.Exec(`INSERT INTO fee_type_assignments (fee_type_id, student_id) VALUES ($1, $2)`, feeTypeID, strings.TrimSpace(studentID))
+			}
+		}
+	}
+	
+	return c.JSON(fiber.Map{
+		"success": true,
+		"message": "Fee type updated successfully",
+	})
+}
+
+// DeleteFeeTypeAPI deletes a fee type
+func DeleteFeeTypeAPI(c *fiber.Ctx, db *sql.DB) error {
+	feeTypeID := c.Params("id")
+	
+	// Soft delete fee type
+	query := `UPDATE fee_types SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL`
+	
+	result, err := db.Exec(query, feeTypeID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"success": false, "error": "Failed to delete fee type"})
+	}
+	
+	rowsAffected, err := result.RowsAffected()
+	if err != nil || rowsAffected == 0 {
+		return c.Status(404).JSON(fiber.Map{"success": false, "error": "Fee type not found"})
+	}
+	
+	// Also delete assignments
+	db.Exec(`DELETE FROM fee_type_assignments WHERE fee_type_id = $1`, feeTypeID)
+	
+	return c.JSON(fiber.Map{
+		"success": true,
+		"message": "Fee type deleted successfully",
 	})
 }
 

@@ -79,8 +79,20 @@ func SetupFeesRoutes(app *fiber.App) {
 		return GetFeeTypesAPI(c, config.GetDB())
 	})
 
+	feeTypesAPI.Get("/:id", func(c *fiber.Ctx) error {
+		return GetFeeTypeAPI(c, config.GetDB())
+	})
+
 	feeTypesAPI.Post("/", func(c *fiber.Ctx) error {
 		return CreateFeeTypeAPI(c, config.GetDB())
+	})
+
+	feeTypesAPI.Put("/:id", func(c *fiber.Ctx) error {
+		return UpdateFeeTypeAPI(c, config.GetDB())
+	})
+
+	feeTypesAPI.Delete("/:id", func(c *fiber.Ctx) error {
+		return DeleteFeeTypeAPI(c, config.GetDB())
 	})
 
 	feeTypesAPI.Get("/:id/assignments", func(c *fiber.Ctx) error {

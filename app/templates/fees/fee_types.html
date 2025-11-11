@@ -65,6 +65,131 @@
     </div>
 </div>
 
+<!-- Edit Fee Type Modal -->
+<div id="editFeeTypeModal" class="fixed inset-0 bg-black bg-opacity-50 z-[9999] hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between p-6 border-b border-gray-200">
+            <h2 class="text-xl font-semibold text-gray-900">Edit Fee Type</h2>
+            <button id="closeEditFeeTypeModal" class="text-gray-400 hover:text-gray-600 transition-colors duration-200">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+
+        <form id="editFeeTypeForm" class="p-6 space-y-6">
+            <input type="hidden" id="editFeeTypeId" name="id">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Name *</label>
+                    <input type="text" id="editFeeTypeName" name="name" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                           placeholder="Enter fee type name">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Code *</label>
+                    <input type="text" id="editFeeTypeCode" name="code" required maxlength="20"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                           placeholder="Enter fee code">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                <textarea id="editFeeTypeDescription" name="description" rows="3"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          placeholder="Enter description (optional)"></textarea>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Amount *</label>
+                <input type="number" id="editFeeTypeAmount" name="amount" required min="0" step="1"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                       placeholder="Enter amount">
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Payment Frequency *</label>
+                    <select id="editFeeTypeFrequency" name="payment_frequency" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                        <option value="per_term">Per term</option>
+                        <option value="once">One-time payment</option>
+                        <option value="per_year">Per year</option>
+                        <option value="on_demand">On demand</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Fee Type *</label>
+                    <select id="editFeeTypeRequired" name="is_required" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                        <option value="true">Must (Required)</option>
+                        <option value="false">Optional</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Status *</label>
+                    <select id="editFeeTypeStatus" name="is_active" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                        <option value="true">Active</option>
+                        <option value="false">Inactive</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Apply To *</label>
+                <select id="editFeeTypeScope" name="scope" required onchange="handleEditScopeChange()"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                    <option value="manual">Manual assignment</option>
+                    <option value="all_students">All students</option>
+                    <option value="all_classes">All classes</option>
+                    <option value="class">Specific classes</option>
+                    <option value="student">Specific students</option>
+                    <option value="class_and_student">Classes + Specific students</option>
+                </select>
+            </div>
+
+            <div id="editClassSelector" class="hidden">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Select Classes</label>
+                <div class="flex gap-2">
+                    <div id="editSelectedClassNames" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 min-h-[40px] text-sm">
+                        No classes selected
+                    </div>
+                    <button type="button" onclick="openEditClassModal()" 
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        Select
+                    </button>
+                </div>
+                <input type="hidden" id="editFeeTypeClasses" name="target_class_id">
+            </div>
+            <div id="editStudentSelector" class="hidden">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Select Students</label>
+                <div class="flex gap-2">
+                    <div id="editSelectedStudentNames" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 min-h-[40px] text-sm">
+                        No students selected
+                    </div>
+                    <button type="button" onclick="openEditStudentModal()" 
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        Select
+                    </button>
+                </div>
+                <input type="hidden" id="editFeeTypeStudents" name="target_student_id">
+            </div>
+
+            <div class="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">
+                <button type="button" id="cancelEditFeeType" 
+                        class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200">
+                    Cancel
+                </button>
+                <button type="submit" id="editFeeTypeSubmitBtn"
+                        class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors duration-200">
+                    <i id="editFeeTypeIcon" class="fas fa-save mr-2"></i>
+                    <span id="editFeeTypeText">Update Fee Type</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Add Fee Type Modal -->
 <div id="addFeeTypeModal" class="fixed inset-0 bg-black bg-opacity-50 z-[9999] hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -170,9 +295,10 @@
                         class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200">
                     Cancel
                 </button>
-                <button type="submit" 
+                <button type="submit" id="addFeeTypeSubmitBtn"
                         class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors duration-200">
-                    <i class="fas fa-plus mr-2"></i>Add Fee Type
+                    <i id="addFeeTypeIcon" class="fas fa-plus mr-2"></i>
+                    <span id="addFeeTypeText">Add Fee Type</span>
                 </button>
             </div>
         </form>
@@ -186,6 +312,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const closeAddFeeTypeModal = document.getElementById('closeAddFeeTypeModal');
     const cancelAddFeeType = document.getElementById('cancelAddFeeType');
     const addFeeTypeForm = document.getElementById('addFeeTypeForm');
+    
+    const editFeeTypeModal = document.getElementById('editFeeTypeModal');
+    const closeEditFeeTypeModal = document.getElementById('closeEditFeeTypeModal');
+    const cancelEditFeeType = document.getElementById('cancelEditFeeType');
+    const editFeeTypeForm = document.getElementById('editFeeTypeForm');
 
     // Load fee types on page load
     loadFeeTypes();
@@ -204,6 +335,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // Edit modal handlers
+    [closeEditFeeTypeModal, cancelEditFeeType].forEach(btn => {
+        btn.addEventListener('click', () => {
+            editFeeTypeModal.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+            editFeeTypeForm.reset();
+        });
+    });
+
     // Close modal when clicking outside
     addFeeTypeModal.addEventListener('click', function(e) {
         if (e.target === addFeeTypeModal) {
@@ -212,10 +352,27 @@ document.addEventListener('DOMContentLoaded', function() {
             addFeeTypeForm.reset();
         }
     });
+    
+    editFeeTypeModal.addEventListener('click', function(e) {
+        if (e.target === editFeeTypeModal) {
+            editFeeTypeModal.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+            editFeeTypeForm.reset();
+        }
+    });
 
     // Form submission
     addFeeTypeForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        
+        const submitBtn = document.getElementById('addFeeTypeSubmitBtn');
+        const icon = document.getElementById('addFeeTypeIcon');
+        const text = document.getElementById('addFeeTypeText');
+        
+        // Show loading state
+        submitBtn.disabled = true;
+        icon.className = 'fas fa-spinner fa-spin mr-2';
+        text.textContent = 'Adding...';
         
         const formData = new FormData(addFeeTypeForm);
         const data = Object.fromEntries(formData);
@@ -238,17 +395,73 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.body.style.overflow = 'auto';
                 addFeeTypeForm.reset();
                 loadFeeTypes();
-                alert('Fee type added successfully!');
+                showSuccessMessage('Success', 'Fee type added successfully!');
             } else {
                 const error = await response.json();
-                alert(error.message || 'Failed to add fee type');
+                showErrorMessage('Error', error.message || 'Failed to add fee type');
             }
         } catch (error) {
-            alert('Error adding fee type');
+            showErrorMessage('Error', 'Error adding fee type');
+        } finally {
+            // Reset button state
+            submitBtn.disabled = false;
+            icon.className = 'fas fa-plus mr-2';
+            text.textContent = 'Add Fee Type';
+        }
+    });
+    
+    // Edit form submission
+    editFeeTypeForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const submitBtn = document.getElementById('editFeeTypeSubmitBtn');
+        const icon = document.getElementById('editFeeTypeIcon');
+        const text = document.getElementById('editFeeTypeText');
+        
+        // Show loading state
+        submitBtn.disabled = true;
+        icon.className = 'fas fa-spinner fa-spin mr-2';
+        text.textContent = 'Updating...';
+        
+        const formData = new FormData(editFeeTypeForm);
+        const data = Object.fromEntries(formData);
+        const feeTypeId = data.id;
+        
+        if (data.description === '') {
+            delete data.description;
+        }
+        delete data.id; // Remove id from data as it's in the URL
+
+        try {
+            const response = await fetch(`/api/fee-types/${feeTypeId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                editFeeTypeModal.classList.add('hidden');
+                document.body.style.overflow = 'auto';
+                editFeeTypeForm.reset();
+                loadFeeTypes();
+                showSuccessMessage('Success', 'Fee type updated successfully!');
+            } else {
+                const error = await response.json();
+                showErrorMessage('Error', error.message || 'Failed to update fee type');
+            }
+        } catch (error) {
+            showErrorMessage('Error', 'Error updating fee type');
+        } finally {
+            // Reset button state
+            submitBtn.disabled = false;
+            icon.className = 'fas fa-save mr-2';
+            text.textContent = 'Update Fee Type';
         }
     });
 
-    function getFrequencyLabel(frequency) {
+    window.getFrequencyLabel = function(frequency) {
         const labels = {
             'once': 'One-time',
             'per_term': 'Per Term',
@@ -259,6 +472,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     async function loadFeeTypes() {
+        // Show loading skeleton
+        const tbody = document.getElementById('feeTypesTableBody');
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="px-6 py-8 text-center text-gray-500">
+                    <div class="flex flex-col items-center">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mb-4"></div>
+                        <p class="text-lg font-medium text-gray-900 mb-2">Loading fee types...</p>
+                    </div>
+                </td>
+            </tr>
+        `;
+        
         try {
             const response = await fetch('/api/fee-types');
             const result = await response.json();
@@ -334,8 +560,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button onclick="viewAssignments('${feeType.id}', '${feeType.name}')" class="text-blue-600 hover:text-blue-900 mr-3">View</button>
-                    <button class="text-primary-600 hover:text-primary-900 mr-3">Edit</button>
-                    <button class="text-red-600 hover:text-red-900">Delete</button>
+                    <button onclick="editFeeType('${feeType.id}')" class="text-primary-600 hover:text-primary-900 mr-3">Edit</button>
+                    <button onclick="deleteFeeType('${feeType.id}', '${feeType.name}')" class="text-red-600 hover:text-red-900">Delete</button>
                 </td>
             </tr>
             `;
@@ -377,6 +603,25 @@ function handleScopeChange() {
         classSelector.classList.remove('hidden');
         studentSelector.classList.remove('hidden');
         updateStudentSelectorState();
+    }
+}
+
+// Edit scope change handling
+function handleEditScopeChange() {
+    const scope = document.getElementById('editFeeTypeScope').value;
+    const classSelector = document.getElementById('editClassSelector');
+    const studentSelector = document.getElementById('editStudentSelector');
+    
+    classSelector.classList.add('hidden');
+    studentSelector.classList.add('hidden');
+    
+    if (scope === 'class') {
+        classSelector.classList.remove('hidden');
+    } else if (scope === 'student') {
+        studentSelector.classList.remove('hidden');
+    } else if (scope === 'class_and_student') {
+        classSelector.classList.remove('hidden');
+        studentSelector.classList.remove('hidden');
     }
 }
 
@@ -641,10 +886,18 @@ function confirmClassSelection() {
         return cls ? cls.name : '';
     }).filter(name => name);
     
-    document.getElementById('feeTypeClasses').value = selectedClassIds.join(',');
-    document.getElementById('selectedClassNames').innerHTML = selectedClassNames.length > 0 
-        ? selectedClassNames.map(name => `<span class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs mr-1 mb-1">${name}</span>`).join('')
-        : 'No classes selected';
+    if (window.editMode) {
+        document.getElementById('editFeeTypeClasses').value = selectedClassIds.join(',');
+        document.getElementById('editSelectedClassNames').innerHTML = selectedClassNames.length > 0 
+            ? selectedClassNames.map(name => `<span class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs mr-1 mb-1">${name}</span>`).join('')
+            : 'No classes selected';
+        window.editMode = false;
+    } else {
+        document.getElementById('feeTypeClasses').value = selectedClassIds.join(',');
+        document.getElementById('selectedClassNames').innerHTML = selectedClassNames.length > 0 
+            ? selectedClassNames.map(name => `<span class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs mr-1 mb-1">${name}</span>`).join('')
+            : 'No classes selected';
+    }
     
     closeClassModal();
 }
@@ -656,10 +909,18 @@ function confirmStudentSelection() {
         return student ? `${student.first_name} ${student.last_name}` : '';
     }).filter(name => name);
     
-    document.getElementById('feeTypeStudents').value = selectedStudentIds.join(',');
-    document.getElementById('selectedStudentNames').innerHTML = selectedStudentNames.length > 0 
-        ? selectedStudentNames.map(name => `<span class="inline-block bg-green-100 text-green-800 px-2 py-1 rounded text-xs mr-1 mb-1">${name}</span>`).join('')
-        : 'No students selected';
+    if (window.editMode) {
+        document.getElementById('editFeeTypeStudents').value = selectedStudentIds.join(',');
+        document.getElementById('editSelectedStudentNames').innerHTML = selectedStudentNames.length > 0 
+            ? selectedStudentNames.map(name => `<span class="inline-block bg-green-100 text-green-800 px-2 py-1 rounded text-xs mr-1 mb-1">${name}</span>`).join('')
+            : 'No students selected';
+        window.editMode = false;
+    } else {
+        document.getElementById('feeTypeStudents').value = selectedStudentIds.join(',');
+        document.getElementById('selectedStudentNames').innerHTML = selectedStudentNames.length > 0 
+            ? selectedStudentNames.map(name => `<span class="inline-block bg-green-100 text-green-800 px-2 py-1 rounded text-xs mr-1 mb-1">${name}</span>`).join('')
+            : 'No students selected';
+    }
     
     closeStudentModal();
 }
@@ -672,38 +933,352 @@ function handleStudentSearch() {
     }, 300);
 }
 
-// View assignments function
-async function viewAssignments(feeTypeId, feeTypeName) {
+// Edit fee type function
+async function editFeeType(feeTypeId) {
+    // Show loading in button
+    const editBtn = event.target;
+    const originalText = editBtn.textContent;
+    editBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    editBtn.disabled = true;
+    
     try {
-        const response = await fetch(`/api/fee-types/${feeTypeId}/assignments`);
+        const response = await fetch(`/api/fee-types/${feeTypeId}`);
         const data = await response.json();
         
-        if (data.success) {
-            let message = `${feeTypeName} Assignments:\n\n`;
+        if (data.success && data.data) {
+            const feeType = data.data;
             
-            if (data.classes && data.classes.length > 0) {
-                message += `Classes (${data.classes.length}):\n`;
-                message += data.classes.join(', ') + '\n\n';
+            // Populate form fields
+            document.getElementById('editFeeTypeId').value = feeType.id;
+            document.getElementById('editFeeTypeName').value = feeType.name;
+            document.getElementById('editFeeTypeCode').value = feeType.code;
+            document.getElementById('editFeeTypeDescription').value = feeType.description || '';
+            document.getElementById('editFeeTypeAmount').value = feeType.amount;
+            document.getElementById('editFeeTypeFrequency').value = feeType.payment_frequency;
+            document.getElementById('editFeeTypeRequired').value = feeType.is_required ? 'true' : 'false';
+            document.getElementById('editFeeTypeStatus').value = feeType.is_active ? 'true' : 'false';
+            document.getElementById('editFeeTypeScope').value = feeType.scope || 'manual';
+            
+            // Set current assignments
+            if (feeType.target_class_id) {
+                document.getElementById('editFeeTypeClasses').value = feeType.target_class_id;
+                // Load class names for display
+                loadEditClassNames(feeType.target_class_id.split(','));
+            }
+            if (feeType.target_student_id) {
+                document.getElementById('editFeeTypeStudents').value = feeType.target_student_id;
+                // Load student names for display
+                loadEditStudentNames(feeType.target_student_id.split(','));
             }
             
-            if (data.students && data.students.length > 0) {
-                message += `Students (${data.students.length}):\n`;
-                message += data.students.join(', ');
-            }
+            // Handle scope visibility
+            handleEditScopeChange();
             
-            if ((!data.classes || data.classes.length === 0) && (!data.students || data.students.length === 0)) {
-                message += 'No specific assignments found.\nThis fee type uses manual assignment.';
-            }
-            
-            alert(message);
+            // Show modal
+            document.getElementById('editFeeTypeModal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
         } else {
-            alert('Failed to load assignments');
+            showErrorMessage('Error', 'Failed to load fee type details');
         }
     } catch (error) {
-        alert('Error loading assignments');
+        showErrorMessage('Error', 'Error loading fee type details');
+    } finally {
+        // Reset button state
+        editBtn.innerHTML = originalText;
+        editBtn.disabled = false;
     }
 }
+
+// Delete fee type function
+async function deleteFeeType(feeTypeId, feeTypeName) {
+    if (!confirm(`Are you sure you want to delete "${feeTypeName}"? This action cannot be undone.`)) {
+        return;
+    }
+    
+    // Show loading in button
+    const deleteBtn = event.target;
+    const originalText = deleteBtn.textContent;
+    deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    deleteBtn.disabled = true;
+    
+    try {
+        const response = await fetch(`/api/fee-types/${feeTypeId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            loadFeeTypes();
+            showSuccessMessage('Success', 'Fee type deleted successfully!');
+        } else {
+            const error = await response.json();
+            showErrorMessage('Error', error.message || 'Failed to delete fee type');
+        }
+    } catch (error) {
+        showErrorMessage('Error', 'Error deleting fee type');
+    } finally {
+        // Reset button state
+        deleteBtn.innerHTML = originalText;
+        deleteBtn.disabled = false;
+    }
+}
+
+// View assignments function
+async function viewAssignments(feeTypeId, feeTypeName) {
+    // Show modal with loading state
+    const modal = document.getElementById('viewAssignmentsModal');
+    const title = document.getElementById('viewAssignmentsTitle');
+    const content = document.getElementById('viewAssignmentsContent');
+    
+    title.textContent = `${feeTypeName} - Loading...`;
+    content.innerHTML = `
+        <div class="flex items-center justify-center py-12">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mr-3"></div>
+            <span class="text-gray-600">Loading fee type details...</span>
+        </div>
+    `;
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    
+    try {
+        // Get both fee type details and assignments
+        const [feeTypeResponse, assignmentsResponse] = await Promise.all([
+            fetch(`/api/fee-types/${feeTypeId}`),
+            fetch(`/api/fee-types/${feeTypeId}/assignments`)
+        ]);
+        
+        const feeTypeData = await feeTypeResponse.json();
+        const assignmentsData = await assignmentsResponse.json();
+        
+        if (feeTypeResponse.ok && assignmentsResponse.ok && feeTypeData.success && assignmentsData.success) {
+            const feeType = feeTypeData.data;
+            const title = document.getElementById('viewAssignmentsTitle');
+            const content = document.getElementById('viewAssignmentsContent');
+            
+            title.textContent = `${feeTypeName} - Details & Assignments`;
+            
+            let contentHTML = `
+                <!-- Fee Type Details -->
+                <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                    <h4 class="font-semibold text-gray-900 mb-3">Fee Type Details</h4>
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <span class="text-gray-500">Code:</span>
+                            <span class="ml-2 font-medium">${feeType.code}</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500">Amount:</span>
+                            <span class="ml-2 font-medium text-green-600">UGX ${parseInt(feeType.amount || 0).toLocaleString()}</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500">Frequency:</span>
+                            <span class="ml-2 font-medium">${window.getFrequencyLabel(feeType.payment_frequency)}</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500">Status:</span>
+                            <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${feeType.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                ${feeType.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500">Required:</span>
+                            <span class="ml-2 font-medium">${feeType.is_required ? 'Yes' : 'No'}</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500">Scope:</span>
+                            <span class="ml-2 font-medium capitalize">${feeType.scope.replace('_', ' ')}</span>
+                        </div>
+                    </div>
+                    ${feeType.description ? `
+                        <div class="mt-3 pt-3 border-t border-gray-200">
+                            <span class="text-gray-500 text-sm">Description:</span>
+                            <p class="mt-1 text-sm text-gray-700">${feeType.description}</p>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            // Add assignments section
+            contentHTML += '<div><h4 class="font-semibold text-gray-900 mb-3">Assignments</h4>';
+            
+            if (assignmentsData.classes && assignmentsData.classes.length > 0) {
+                contentHTML += `
+                    <div class="mb-4">
+                        <h5 class="text-sm font-medium text-gray-700 mb-2">Classes (${assignmentsData.classes.length})</h5>
+                        <div class="flex flex-wrap gap-2">
+                            ${assignmentsData.classes.map(cls => `<span class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">${cls}</span>`).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            if (assignmentsData.students && assignmentsData.students.length > 0) {
+                contentHTML += `
+                    <div class="mb-4">
+                        <h5 class="text-sm font-medium text-gray-700 mb-2">Students (${assignmentsData.students.length})</h5>
+                        <div class="flex flex-wrap gap-2">
+                            ${assignmentsData.students.map(student => `<span class="inline-block bg-green-100 text-green-800 px-2 py-1 rounded text-sm">${student}</span>`).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            if ((!assignmentsData.classes || assignmentsData.classes.length === 0) && (!assignmentsData.students || assignmentsData.students.length === 0)) {
+                contentHTML += `
+                    <div class="text-center py-6 bg-gray-50 rounded-lg">
+                        <div class="text-gray-400 mb-2">
+                            <i class="fas fa-users text-2xl"></i>
+                        </div>
+                        <p class="text-gray-600 text-sm">No specific assignments found.</p>
+                        <p class="text-xs text-gray-500">This fee type uses manual assignment.</p>
+                    </div>
+                `;
+            }
+            
+            contentHTML += '</div>';
+            
+            content.innerHTML = contentHTML;
+            document.getElementById('viewAssignmentsModal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        } else {
+            console.error('API Error:', { feeTypeData, assignmentsData });
+            showErrorMessage('Error', 'Failed to load fee type details');
+        }
+    } catch (error) {
+        console.error('Exception:', error);
+        showErrorMessage('Error', 'Error loading fee type details');
+    }
+}
+
+// Helper functions for edit modal
+async function loadEditClassNames(classIds) {
+    try {
+        const response = await fetch('/api/classes');
+        const data = await response.json();
+        const classes = data.classes || [];
+        
+        const selectedClasses = classes.filter(c => classIds.includes(c.id));
+        const classNames = selectedClasses.map(c => c.name);
+        
+        document.getElementById('editSelectedClassNames').innerHTML = classNames.length > 0 
+            ? classNames.map(name => `<span class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs mr-1 mb-1">${name}</span>`).join('')
+            : 'No classes selected';
+    } catch (error) {
+        console.error('Error loading class names:', error);
+    }
+}
+
+async function loadEditStudentNames(studentIds) {
+    try {
+        const response = await fetch('/api/students/table?limit=1000');
+        const data = await response.json();
+        const students = data.students || [];
+        
+        const selectedStudents = students.filter(s => studentIds.includes(s.id));
+        const studentNames = selectedStudents.map(s => `${s.first_name} ${s.last_name}`);
+        
+        document.getElementById('editSelectedStudentNames').innerHTML = studentNames.length > 0 
+            ? studentNames.map(name => `<span class="inline-block bg-green-100 text-green-800 px-2 py-1 rounded text-xs mr-1 mb-1">${name}</span>`).join('')
+            : 'No students selected';
+    } catch (error) {
+        console.error('Error loading student names:', error);
+    }
+}
+
+// Edit modal functions (reuse existing modal logic)
+function openEditClassModal() {
+    // Reuse existing class modal but update edit fields
+    window.editMode = true;
+    openClassModal();
+}
+
+function openEditStudentModal() {
+    // Reuse existing student modal but update edit fields
+    window.editMode = true;
+    openStudentModal();
+}
+// Modal helper functions
+function showSuccessMessage(title, message) {
+    const modal = document.getElementById('messageModal');
+    const icon = document.getElementById('messageIcon');
+    const titleEl = document.getElementById('messageTitle');
+    const textEl = document.getElementById('messageText');
+    const button = document.getElementById('messageButton');
+    
+    icon.className = 'mx-auto mb-4 w-12 h-12 rounded-full flex items-center justify-center bg-green-100';
+    icon.innerHTML = '<i class="fas fa-check text-green-600 text-xl"></i>';
+    titleEl.textContent = title;
+    textEl.textContent = message;
+    button.className = 'px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors duration-200';
+    
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function showErrorMessage(title, message) {
+    const modal = document.getElementById('messageModal');
+    const icon = document.getElementById('messageIcon');
+    const titleEl = document.getElementById('messageTitle');
+    const textEl = document.getElementById('messageText');
+    const button = document.getElementById('messageButton');
+    
+    icon.className = 'mx-auto mb-4 w-12 h-12 rounded-full flex items-center justify-center bg-red-100';
+    icon.innerHTML = '<i class="fas fa-times text-red-600 text-xl"></i>';
+    titleEl.textContent = title;
+    textEl.textContent = message;
+    button.className = 'px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors duration-200';
+    
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeMessageModal() {
+    document.getElementById('messageModal').classList.add('hidden');
+    document.body.style.overflow = 'auto';
+}
+
+function closeViewAssignmentsModal() {
+    document.getElementById('viewAssignmentsModal').classList.add('hidden');
+    document.body.style.overflow = 'auto';
+}
 </script>
+
+<!-- View Assignments Modal -->
+<div id="viewAssignmentsModal" class="fixed inset-0 bg-black bg-opacity-50 z-[9999] hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between p-6 border-b border-gray-200">
+            <h2 id="viewAssignmentsTitle" class="text-xl font-semibold text-gray-900">Fee Type Assignments</h2>
+            <button onclick="closeViewAssignmentsModal()" class="text-gray-400 hover:text-gray-600 transition-colors duration-200">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <div class="p-6">
+            <div id="viewAssignmentsContent" class="space-y-4">
+                <!-- Content will be populated here -->
+            </div>
+        </div>
+        <div class="flex justify-end p-6 border-t border-gray-200">
+            <button onclick="closeViewAssignmentsModal()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors duration-200">
+                Close
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Success/Error Modal -->
+<div id="messageModal" class="fixed inset-0 bg-black bg-opacity-50 z-[9999] hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full">
+        <div class="p-6 text-center">
+            <div id="messageIcon" class="mx-auto mb-4 w-12 h-12 rounded-full flex items-center justify-center">
+                <!-- Icon will be set dynamically -->
+            </div>
+            <h3 id="messageTitle" class="text-lg font-semibold mb-2">Message</h3>
+            <p id="messageText" class="text-gray-600 mb-6">Message content</p>
+            <button onclick="closeMessageModal()" id="messageButton" class="px-6 py-2 rounded-lg font-medium transition-colors duration-200">
+                OK
+            </button>
+        </div>
+    </div>
+</div>
 
 <!-- Class Selection Modal -->
 <div id="classSelectionModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
