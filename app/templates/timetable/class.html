@@ -315,9 +315,20 @@
                         return;
                     }
 
+                    // Extract start and end time from time slot (e.g., "07:20 - 08:40")
+                    const timeParts = time.split(' - ');
+                    const startTime = timeParts[0];
+                    const endTime = timeParts[1];
+
                     let url = '/api/teachers/for-timetable';
-                    if (paperId) {
-                        url += `?paper_id=${paperId}`;
+                    const params = new URLSearchParams();
+                    if (paperId) params.append('paper_id', paperId);
+                    if (day) params.append('day_of_week', day);
+                    if (startTime) params.append('start_time', startTime);
+                    if (endTime) params.append('end_time', endTime);
+                    
+                    if (params.toString()) {
+                        url += '?' + params.toString();
                     }
 
                     try {

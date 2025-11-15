@@ -70,7 +70,89 @@ func GetTeachersForSelectionAPI(c *fiber.Ctx) error {
 func GetTeachersForTimetableAPI(c *fiber.Ctx) error {
 	subjectID := c.Query("subject_id")
 	paperID := c.Query("paper_id")
+	dayOfWeek := c.Query("day_of_week")
+	startTime := c.Query("start_time")
+	endTime := c.Query("end_time")
 
+	// If availability parameters are provided, use the availability-aware query
+	if dayOfWeek != "" && startTime != "" && endTime != "" {
+		db := config.GetDB()
+		
+		// Convert day name to number
+		dayMap := map[string]int{
+			"sunday": 0, "monday": 1, "tuesday": 2, "wednesday": 3,
+			"thursday": 4, "friday": 5, "saturday": 6,
+		}
+		dayNum, exists := dayMap[dayOfWeek]
+		if !exists {
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid day_of_week"})
+		}
+
+		query := `
+			SELECT DISTINCT u.id, u.first_name, u.last_name, u.email
+			FROM users u
+			INNER JOIN user_roles ur ON u.id = ur.user_id
+			INNER JOIN roles r ON ur.role_id = r.id
+			INNER JOIN teacher_subjects ts ON u.id = ts.teacher_id
+			INNER JOIN teacher_availability ta ON u.id = ta.teacher_id AND ta.day_of_week = $1
+			WHERE u.is_active = true 
+			  AND r.name IN ('class_teacher', 'subject_teacher', 'head_teacher', 'admin')
+			  AND ta.is_available = true 
+			  AND ta.start_time <= $2::time 
+			  AND ta.end_time >= $3::time
+			  AND u.id NOT IN (
+				  SELECT te.teacher_id FROM timetable_entries te
+				  WHERE te.day_of_week = $4 
+					AND te.is_active = true
+					AND (
+						(te.start_time <= $2::time AND te.end_time > $2::time) OR
+						(te.start_time < $3::time AND te.end_time >= $3::time) OR
+						(te.start_time >= $2::time AND te.end_time <= $3::time)
+					)
+			  )`
+
+		args := []interface{}{dayNum, startTime, endTime, dayOfWeek}
+
+		// Add subject/paper filtering
+		if subjectID != "" {
+			query += ` AND ts.subject_id = $5`
+			args = append(args, subjectID)
+		}
+		
+		if paperID != "" {
+			query += ` AND ts.paper_id = $` + fmt.Sprintf("%d", len(args)+1)
+			args = append(args, paperID)
+		}
+
+		query += ` ORDER BY u.first_name, u.last_name`
+
+		rows, err := db.Query(query, args...)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch available teachers"})
+		}
+		defer rows.Close()
+
+		var teachers []fiber.Map
+		for rows.Next() {
+			var id, firstName, lastName, email string
+			if err := rows.Scan(&id, &firstName, &lastName, &email); err != nil {
+				continue
+			}
+			teachers = append(teachers, fiber.Map{
+				"id":         id,
+				"first_name": firstName,
+				"last_name":  lastName,
+				"email":      email,
+				"full_name":  firstName + " " + lastName,
+			})
+		}
+
+		return c.JSON(fiber.Map{
+			"teachers": teachers,
+		})
+	}
+
+	// Fallback to original logic if no availability parameters
 	teachers, err := database.GetTeachersBySubjectOrPaper(config.GetDB(), subjectID, paperID)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Database error"})

@@ -67,4 +67,3 @@ func ClassTimetablePage(c *fiber.Ctx) error {
 		"Email":       user.Email,
 	})
 }
-
