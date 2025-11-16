@@ -435,7 +435,7 @@
                                 <td class="px-4 py-4">
                                     <div class="${entry.is_break ? 'bg-orange-50 border border-orange-200' : 'bg-blue-50 border border-blue-200'} rounded-lg p-3 min-w-0">
                                         <div class="flex justify-between items-start mb-1">
-                                            <div class="font-medium ${entry.is_break ? 'text-orange-900' : 'text-blue-900'} text-sm leading-tight flex-1 min-w-0">${entry.subject_name}</div>
+                                            <div class="font-medium ${entry.is_break ? 'text-orange-900' : 'text-blue-900'} text-sm leading-tight flex-1 min-w-0 whitespace-nowrap overflow-hidden text-ellipsis">${entry.subject_name}</div>
                                             ${entry.is_break ? '' : `<div class="text-xs text-blue-600 font-mono ml-2 whitespace-nowrap flex-shrink-0">${entry.paper_code || ''}</div>`}
                                         </div>
                                         ${entry.is_break ? '' : `<div class="text-xs text-blue-700 whitespace-nowrap overflow-hidden text-ellipsis">${entry.teacher_name || 'No teacher assigned'}</div>`}
