@@ -11,6 +11,15 @@ import (
 
 type Config struct {
 	DB *sql.DB
+	SMTP SMTPConfig
+}
+
+type SMTPConfig struct {
+	Host     string
+	Port     int
+	Username string
+	Password string
+	From     string
 }
 
 var AppConfig *Config
@@ -67,8 +76,18 @@ func InitDB() {
 		log.Fatal("Cannot establish database connection")
 	}
 
-	AppConfig = &Config{DB: db}
+	AppConfig = &Config{
+		DB: db,
+		SMTP: SMTPConfig{
+			Host:     "smtp.gmail.com",
+			Port:     587,
+			Username: "swadiqjuniorschools@gmail.com",
+			Password: "varn boqq brqq ftjv",
+			From:     "swadiqjuniorschools@gmail.com",
+		},
+	}
 	log.Println("Database connected successfully")
+	log.Println("Email configuration initialized")
 }
 
 func GetDB() *sql.DB {

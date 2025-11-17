@@ -1,87 +1,150 @@
 <!DOCTYPE html>
-<html lang="en">
+<html class="light" lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{.Title}}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>{{.Title}}</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#135bec",
+            "background-light": "#f6f6f8",
+            "background-dark": "#101622",
+          },
+          fontFamily: {
+            "display": ["Inter", "sans-serif"]
+          },
+          borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+        },
+      },
+    }
+</script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings:
+      'FILL' 0,
+      'wght' 400,
+      'GRAD' 0,
+      'opsz' 24
+    }
+</style>
+
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center">
-    <div class="max-w-md w-full bg-white rounded-lg shadow-md p-6">
-        <div class="text-center mb-8">
-            <h1 class="text-2xl font-bold text-gray-900">Swadiq Schools</h1>
-            <p class="text-gray-600 mt-2">Teacher & Admin Portal</p>
-        </div>
+<body class="font-display">
+<div class="relative flex min-h-screen w-full flex-col items-center justify-center bg-background-light dark:bg-background-dark p-4">
+<div class="w-full max-w-md">
+<!-- Logo Placeholder -->
+<div class="flex justify-center mb-8">
+<div class="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/20 text-primary">
+<span class="material-symbols-outlined text-3xl">
+            hexagon
+</span>
+</div>
+</div>
+<div class="w-full rounded-xl bg-white p-6 shadow-sm dark:bg-background-dark/50 sm:p-8">
+<!-- Headline -->
+<h1 class="text-center text-2xl font-bold leading-tight tracking-tight text-slate-900 dark:text-white sm:text-3xl">Welcome Back</h1>
+<p class="mt-2 text-center text-sm font-normal leading-normal text-slate-500 dark:text-slate-400">Log in to your account to continue.</p>
+<!-- Form -->
+<form id="loginForm" class="mt-8 space-y-5">
+<!-- Email Field -->
+<div>
+<label class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300" for="email">Email Address</label>
+<div class="relative flex w-full items-center">
+<span class="material-symbols-outlined absolute left-4 text-slate-400">mail</span>
+<input class="form-input h-12 w-full min-w-0 flex-1 rounded-lg border border-slate-300 bg-background-light py-3 pl-12 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-slate-600 dark:bg-background-dark dark:text-white dark:focus:border-primary" id="email" name="email" placeholder="you@example.com" type="email" required/>
+</div>
+</div>
+<!-- Password Field -->
+<div>
+<label class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300" for="password">Password</label>
+<div class="relative flex w-full items-center">
+<span class="material-symbols-outlined absolute left-4 text-slate-400">lock</span>
+<input class="form-input h-12 w-full min-w-0 flex-1 rounded-lg border border-slate-300 bg-background-light py-3 pl-12 pr-12 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-slate-600 dark:bg-background-dark dark:text-white dark:focus:border-primary" id="password" name="password" placeholder="Enter your password" type="password" required/>
+<button class="absolute right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300" type="button" id="togglePassword">
+<span class="material-symbols-outlined text-xl">visibility_off</span>
+</button>
+</div>
+</div>
+<!-- Helper/Error Text -->
+<div id="errorMessage" class="hidden">
+<p class="text-xs text-red-500"></p>
+</div>
+<!-- Forgot Password Link -->
+<div class="flex justify-end">
+<a class="text-sm font-medium text-primary hover:underline" href="/auth/forgot-password">Forgot password?</a>
+</div>
+<!-- Login Button -->
+<button type="submit" id="loginBtn" class="flex h-12 w-full items-center justify-center rounded-lg bg-primary px-6 text-sm font-semibold text-white transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-background-dark">Login</button>
+</form>
+</div>
+</div>
 
-        <form id="loginForm" class="space-y-6">
-            <div>
-                <label for="email" class="block text-sm font-medium text-gray-700">Email Address</label>
-                <input type="email" id="email" name="email" required
-                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-            </div>
+<script>
+    // Password visibility toggle
+    document.getElementById('togglePassword').addEventListener('click', function() {
+        const passwordInput = document.getElementById('password');
+        const toggleIcon = this.querySelector('.material-symbols-outlined');
+        
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            toggleIcon.textContent = 'visibility';
+        } else {
+            passwordInput.type = 'password';
+            toggleIcon.textContent = 'visibility_off';
+        }
+    });
 
-            <div>
-                <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
-                <input type="password" id="password" name="password" required
-                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-            </div>
+    // Login form submission
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
 
-            <div id="errorMessage" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded"></div>
+        const loginBtn = document.getElementById('loginBtn');
+        const errorMessage = document.getElementById('errorMessage');
+        const errorText = errorMessage.querySelector('p');
 
-            <button type="submit" id="loginBtn"
-                class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50">
-                Sign In
-            </button>
-        </form>
+        loginBtn.disabled = true;
+        loginBtn.innerHTML = 'Signing in...';
+        loginBtn.classList.add('opacity-75');
+        errorMessage.classList.add('hidden');
 
-        <div class="mt-6 text-center">
-            <a href="/auth/forgot-password" class="text-sm text-blue-600 hover:text-blue-500">Forgot your password?</a>
-        </div>
-    </div>
+        const formData = {
+            email: document.getElementById('email').value,
+            password: document.getElementById('password').value
+        };
 
-    <script>
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
+        try {
+            const response = await fetch('/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            });
 
-            const loginBtn = document.getElementById('loginBtn');
-            const errorMessage = document.getElementById('errorMessage');
+            const data = await response.json();
 
-            loginBtn.disabled = true;
-            loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Signing in...';
-            loginBtn.classList.add('opacity-75', 'cursor-not-allowed');
-            errorMessage.classList.add('hidden');
-
-            const formData = {
-                email: document.getElementById('email').value,
-                password: document.getElementById('password').value
-            };
-
-            try {
-                const response = await fetch('/auth/login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(formData)
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    window.location.href = '/dashboard';
-                } else {
-                    errorMessage.textContent = data.error || 'Login failed';
-                    errorMessage.classList.remove('hidden');
-                }
-            } catch (error) {
-                errorMessage.textContent = 'Network error. Please try again.';
+            if (response.ok) {
+                window.location.href = '/';
+            } else {
+                errorText.textContent = data.error || 'Login failed';
                 errorMessage.classList.remove('hidden');
-            } finally {
-                loginBtn.disabled = false;
-                loginBtn.innerHTML = 'Sign In';
-                loginBtn.classList.remove('opacity-75', 'cursor-not-allowed');
             }
-        });
-    </script>
+        } catch (error) {
+            errorText.textContent = 'Network error. Please try again.';
+            errorMessage.classList.remove('hidden');
+        } finally {
+            loginBtn.disabled = false;
+            loginBtn.innerHTML = 'Login';
+            loginBtn.classList.remove('opacity-75');
+        }
+    });
+</script>
 </body>
 </html>

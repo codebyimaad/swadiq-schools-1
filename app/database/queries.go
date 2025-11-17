@@ -119,6 +119,31 @@ func UpdateUserPassword(db *sql.DB, userID string, hashedPassword string) error 
 	return err
 }
 
+func CreatePasswordResetToken(db *sql.DB, email, token string) error {
+	query := `INSERT INTO password_reset_tokens (email, token, expires_at, created_at) 
+			  VALUES ($1, $2, NOW() + INTERVAL '24 hours', NOW())
+			  ON CONFLICT (email) DO UPDATE SET 
+			  token = EXCLUDED.token, 
+			  expires_at = EXCLUDED.expires_at, 
+			  created_at = EXCLUDED.created_at`
+	_, err := db.Exec(query, email, token)
+	return err
+}
+
+func ValidatePasswordResetToken(db *sql.DB, token string) (string, error) {
+	var email string
+	query := `SELECT email FROM password_reset_tokens 
+			  WHERE token = $1 AND expires_at > NOW() AND used_at IS NULL`
+	err := db.QueryRow(query, token).Scan(&email)
+	return email, err
+}
+
+func MarkPasswordResetTokenAsUsed(db *sql.DB, token string) error {
+	query := `UPDATE password_reset_tokens SET used_at = NOW() WHERE token = $1`
+	_, err := db.Exec(query, token)
+	return err
+}
+
 // CreateTeacher creates a new teacher with department assignment
 func CreateTeacher(db *sql.DB, user *models.User, departmentID *string) error {
 	// Hash password before storing

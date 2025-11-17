@@ -129,8 +129,7 @@ func ChangePasswordAPI(c *fiber.Ctx) error {
 
 func ForgotPasswordAPI(c *fiber.Ctx) error {
 	type ForgotPasswordRequest struct {
-		Email       string `json:"email"`
-		NewPassword string `json:"new_password,omitempty"`
+		Email string `json:"email"`
 	}
 
 	var req ForgotPasswordRequest
@@ -139,7 +138,7 @@ func ForgotPasswordAPI(c *fiber.Ctx) error {
 	}
 
 	// Check if user exists
-	user, err := database.GetUserByEmail(config.GetDB(), req.Email)
+	_, err := database.GetUserByEmail(config.GetDB(), req.Email)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return c.Status(404).JSON(fiber.Map{"error": "Email not found"})
@@ -147,12 +146,49 @@ func ForgotPasswordAPI(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Database error"})
 	}
 
-	// If no new password provided, just verify email exists
-	if req.NewPassword == "" {
-		return c.JSON(fiber.Map{
-			"message": "Email verified",
-			"user_found": true,
-		})
+	// Generate reset token
+	resetToken, err := GenerateResetToken()
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to generate reset token"})
+	}
+
+	// Store token in database
+	if err := database.CreatePasswordResetToken(config.GetDB(), req.Email, resetToken); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create reset token"})
+	}
+
+	// Send reset email
+	if err := SendPasswordResetEmail(req.Email, resetToken, c.Get("Host")); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to send reset email"})
+	}
+
+	return c.JSON(fiber.Map{"message": "Password reset link sent to your email"})
+}
+
+func ResetPasswordAPI(c *fiber.Ctx) error {
+	type ResetPasswordRequest struct {
+		Token       string `json:"token"`
+		NewPassword string `json:"new_password"`
+	}
+
+	var req ResetPasswordRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+
+	// Validate token and get email
+	email, err := database.ValidatePasswordResetToken(config.GetDB(), req.Token)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid or expired reset token"})
+		}
+		return c.Status(500).JSON(fiber.Map{"error": "Database error"})
+	}
+
+	// Get user by email
+	user, err := database.GetUserByEmail(config.GetDB(), email)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "User not found"})
 	}
 
 	// Hash new password
@@ -164,6 +200,11 @@ func ForgotPasswordAPI(c *fiber.Ctx) error {
 	// Update password
 	if err := database.UpdateUserPassword(config.GetDB(), user.ID, hashedPassword); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to update password"})
+	}
+
+	// Mark token as used
+	if err := database.MarkPasswordResetTokenAsUsed(config.GetDB(), req.Token); err != nil {
+		// Log error but don't fail the request
 	}
 
 	return c.JSON(fiber.Map{"message": "Password reset successfully"})

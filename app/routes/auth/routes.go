@@ -16,6 +16,8 @@ func SetupAuthRoutes(app *fiber.App) {
 	auth.Post("/logout", LogoutAPI)
 	auth.Get("/forgot-password", ShowForgotPasswordPage)
 	auth.Post("/forgot-password", ForgotPasswordAPI)
+	auth.Get("/reset-password", ShowResetPasswordPage)
+	auth.Post("/reset-password", ResetPasswordAPI)
 
 	// Protected routes
 	auth.Use(AuthMiddleware)
@@ -39,6 +41,21 @@ func ShowLoginPage(c *fiber.Ctx) error {
 func ShowForgotPasswordPage(c *fiber.Ctx) error {
 	return c.Render("auth/forgot-password", fiber.Map{
 		"Title": "Forgot Password - Swadiq Schools",
+	}, "")
+}
+
+func ShowResetPasswordPage(c *fiber.Ctx) error {
+	token := c.Query("token")
+	if token == "" {
+		return c.Status(400).Render("error", fiber.Map{
+			"Title": "Invalid Reset Link - Swadiq Schools",
+			"ErrorMessage": "Invalid reset link. Please request a new password reset.",
+		})
+	}
+
+	return c.Render("auth/reset-password", fiber.Map{
+		"Title": "Reset Password - Swadiq Schools",
+		"Token": token,
 	}, "")
 }
 
