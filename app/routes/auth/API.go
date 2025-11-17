@@ -179,10 +179,7 @@ func ResetPasswordAPI(c *fiber.Ctx) error {
 	// Validate token and get email
 	email, err := database.ValidatePasswordResetToken(config.GetDB(), req.Token)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return c.Status(400).JSON(fiber.Map{"error": "Invalid or expired reset token"})
-		}
-		return c.Status(500).JSON(fiber.Map{"error": "Database error"})
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid or expired reset token"})
 	}
 
 	// Get user by email

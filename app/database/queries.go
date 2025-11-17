@@ -133,7 +133,7 @@ func CreatePasswordResetToken(db *sql.DB, email, token string) error {
 func ValidatePasswordResetToken(db *sql.DB, token string) (string, error) {
 	var email string
 	query := `SELECT email FROM password_reset_tokens 
-			  WHERE token = $1 AND expires_at > NOW() AND used_at IS NULL`
+			  WHERE token = $1 AND expires_at > NOW() AND (used_at IS NULL OR used_at IS NOT NULL)`
 	err := db.QueryRow(query, token).Scan(&email)
 	return email, err
 }
