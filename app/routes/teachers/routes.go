@@ -21,6 +21,7 @@ func SetupTeachersRoutes(app *fiber.App) {
 	api.Get("/", GetTeachersAPI)
 	api.Get("/selection", GetTeachersForSelectionAPI) // Fast endpoint for selection
 	api.Get("/for-timetable", GetTeachersForTimetableAPI)
+	api.Get("/all-for-paper", GetAllTeachersForPaperAPI)
 	api.Get("/counts", GetTeacherCountsAPI)
 	api.Get("/stats", GetTeacherStatsAPI)
 	api.Get("/search", SearchTeachersAPI)

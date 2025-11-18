@@ -163,6 +163,50 @@ func GetTeachersForTimetableAPI(c *fiber.Ctx) error {
 	})
 }
 
+func GetAllTeachersForPaperAPI(c *fiber.Ctx) error {
+	paperID := c.Query("paper_id")
+	if paperID == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Paper ID is required"})
+	}
+
+	db := config.GetDB()
+	query := `
+		SELECT DISTINCT u.id, u.first_name, u.last_name, u.email
+		FROM users u
+		INNER JOIN user_roles ur ON u.id = ur.user_id
+		INNER JOIN roles r ON ur.role_id = r.id
+		INNER JOIN teacher_subjects ts ON u.id = ts.teacher_id
+		WHERE u.is_active = true 
+		  AND r.name IN ('class_teacher', 'subject_teacher', 'head_teacher', 'admin')
+		  AND ts.paper_id = $1
+		ORDER BY u.first_name, u.last_name`
+
+	rows, err := db.Query(query, paperID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch teachers"})
+	}
+	defer rows.Close()
+
+	var teachers []fiber.Map
+	for rows.Next() {
+		var id, firstName, lastName, email string
+		if err := rows.Scan(&id, &firstName, &lastName, &email); err != nil {
+			continue
+		}
+		teachers = append(teachers, fiber.Map{
+			"id":         id,
+			"first_name": firstName,
+			"last_name":  lastName,
+			"email":      email,
+			"full_name":  firstName + " " + lastName,
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"teachers": teachers,
+	})
+}
+
 func GetTeacherCountsAPI(c *fiber.Ctx) error {
 	counts, err := database.GetTeacherCountsByRole(config.GetDB())
 	if err != nil {
@@ -383,7 +427,7 @@ func DeleteTeacherAPI(c *fiber.Ctx) error {
 	}
 
 	// Check if teacher exists
-	_, err := GetTeacherByID(config.GetDB(), teacherID)
+	_, err := database.GetTeacherByID(config.GetDB(), teacherID)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Teacher not found"})
 	}

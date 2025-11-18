@@ -1074,15 +1074,9 @@
                             console.log('Setting paper:', entry.paper_id);
                             paperSelect.value = entry.paper_id;
                             
-                            // Manually load teachers for this paper
-                            let teacherResponse = await fetch(`/api/teachers/for-timetable?paper_id=${entry.paper_id}&day_of_week=${day}&start_time=${timeSlot.split(' - ')[0]}&end_time=${timeSlot.split(' - ')[1]}`);
-                            let teacherData = await teacherResponse.json();
-                            
-                            // If no available teachers found, load all teachers for this paper
-                            if (!teacherData.teachers || teacherData.teachers.length === 0) {
-                                teacherResponse = await fetch(`/api/teachers/for-timetable?paper_id=${entry.paper_id}`);
-                                teacherData = await teacherResponse.json();
-                            }
+                            // Load all teachers for this paper (including currently assigned)
+                            const teacherResponse = await fetch(`/api/teachers/all-for-paper?paper_id=${entry.paper_id}`);
+                            const teacherData = await teacherResponse.json();
                             
                             teacherSelect.innerHTML = '<option value="">Select Teacher</option>';
                             if (teacherData.teachers) {

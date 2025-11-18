@@ -32,10 +32,33 @@ func CreateTimetableEntryAPI(c *fiber.Ctx) error {
 	}
 
 	db := config.GetDB()
+	
+	// Check for teacher conflicts
+	conflictQuery := `SELECT COUNT(*) FROM timetable_entries 
+					 WHERE teacher_id = $1 AND day_of_week = $2 AND is_active = true
+					 AND class_id != $3
+					 AND (($4 >= start_time AND $4 < end_time) OR ($5 > start_time AND $5 <= end_time) OR ($4 <= start_time AND $5 >= end_time))`
+	
+	var conflictCount int
+	var err error
+	err = db.QueryRow(conflictQuery, req.TeacherID, req.DayOfWeek, req.ClassID, req.StartTime, req.EndTime).Scan(&conflictCount)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to check teacher availability"})
+	}
+	
+	if conflictCount > 0 {
+		// Get teacher name for error message
+		var teacherName string
+		db.QueryRow("SELECT first_name || ' ' || last_name FROM users WHERE id = $1", req.TeacherID).Scan(&teacherName)
+		return c.Status(400).JSON(fiber.Map{
+			"error": fmt.Sprintf("Teacher %s is already assigned to another class during %s-%s on %s", teacherName, req.StartTime, req.EndTime, req.DayOfWeek),
+		})
+	}
+
 	query := `INSERT INTO timetable_entries (class_id, subject_id, teacher_id, day_of_week, start_time, end_time, room, is_active, created_at, updated_at)
 			  VALUES ($1, $2, $3, $4, $5, $6, $7, true, NOW(), NOW())`
 
-	_, err := db.Exec(query, req.ClassID, req.SubjectID, req.TeacherID, req.DayOfWeek, req.StartTime, req.EndTime, req.Room)
+	_, err = db.Exec(query, req.ClassID, req.SubjectID, req.TeacherID, req.DayOfWeek, req.StartTime, req.EndTime, req.Room)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create timetable entry"})
 	}
@@ -65,12 +88,35 @@ func UpdateTimetableEntryAPI(c *fiber.Ctx) error {
 	}
 
 	db := config.GetDB()
+	
+	// Check for teacher conflicts (excluding current entry)
+	conflictQuery := `SELECT COUNT(*) FROM timetable_entries 
+					 WHERE teacher_id = $1 AND day_of_week = $2 AND is_active = true
+					 AND class_id != $3 AND id != $4
+					 AND (($5 >= start_time AND $5 < end_time) OR ($6 > start_time AND $6 <= end_time) OR ($5 <= start_time AND $6 >= end_time))`
+	
+	var conflictCount int
+	var err error
+	err = db.QueryRow(conflictQuery, req.TeacherID, req.DayOfWeek, req.ClassID, entryID, req.StartTime, req.EndTime).Scan(&conflictCount)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to check teacher availability"})
+	}
+	
+	if conflictCount > 0 {
+		// Get teacher name for error message
+		var teacherName string
+		db.QueryRow("SELECT first_name || ' ' || last_name FROM users WHERE id = $1", req.TeacherID).Scan(&teacherName)
+		return c.Status(400).JSON(fiber.Map{
+			"error": fmt.Sprintf("Teacher %s is already assigned to another class during %s-%s on %s", teacherName, req.StartTime, req.EndTime, req.DayOfWeek),
+		})
+	}
+
 	query := `UPDATE timetable_entries 
 			  SET class_id = $1, subject_id = $2, teacher_id = $3, day_of_week = $4, 
 				  start_time = $5, end_time = $6, room = $7, updated_at = NOW()
 			  WHERE id = $8`
 
-	_, err := db.Exec(query, req.ClassID, req.SubjectID, req.TeacherID, req.DayOfWeek, req.StartTime, req.EndTime, req.Room, entryID)
+	_, err = db.Exec(query, req.ClassID, req.SubjectID, req.TeacherID, req.DayOfWeek, req.StartTime, req.EndTime, req.Room, entryID)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to update timetable entry"})
 	}
@@ -155,6 +201,28 @@ func SaveTimetableAPI(c *fiber.Ctx) error {
 		if n != 2 || err != nil {
 			log.Printf("Error parsing time slot '%s': %v", entry.TimeSlot, err)
 			continue
+		}
+
+		// Check for teacher conflicts
+		conflictQuery := `SELECT COUNT(*) FROM timetable_entries 
+						 WHERE teacher_id = $1 AND day_of_week = $2 AND is_active = true
+						 AND class_id != $3
+						 AND (($4 >= start_time AND $4 < end_time) OR ($5 > start_time AND $5 <= end_time) OR ($4 <= start_time AND $5 >= end_time))`
+		
+		var conflictCount int
+		err = tx.QueryRow(conflictQuery, entry.TeacherID, entry.Day, classID, startTime, endTime).Scan(&conflictCount)
+		if err != nil {
+			log.Printf("Error checking teacher conflicts: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to check teacher availability"})
+		}
+		
+		if conflictCount > 0 {
+			// Get teacher name for error message
+			var teacherName string
+			tx.QueryRow("SELECT first_name || ' ' || last_name FROM users WHERE id = $1", entry.TeacherID).Scan(&teacherName)
+			return c.Status(400).JSON(fiber.Map{
+				"error": fmt.Sprintf("Teacher %s is already assigned to another class during %s on %s", teacherName, entry.TimeSlot, entry.Day),
+			})
 		}
 
 		query := `INSERT INTO timetable_entries (class_id, subject_id, paper_id, teacher_id, day_of_week, start_time, end_time, is_active, created_at, updated_at)
