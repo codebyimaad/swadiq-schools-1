@@ -9,6 +9,7 @@ import (
 	"swadiq-schools/app/routes/classes"
 	"swadiq-schools/app/routes/dashboard"
 	"swadiq-schools/app/routes/departments"
+	"swadiq-schools/app/routes/exams"
 	"swadiq-schools/app/routes/fees"
 	"swadiq-schools/app/routes/papers"
 	"swadiq-schools/app/routes/parents"
@@ -92,8 +93,8 @@ func main() {
 
 	// Initialize template engine
 	engine := html.New("./app/templates", ".html")
-	engine.Reload(false) // Disable template reloading
-	engine.Debug(false)  // Disable debug mode
+	engine.Reload(true) // Enable template reloading for development
+	engine.Debug(false) // Disable debug mode to reduce verbose logs
 
 	// Create Fiber app
 	app := fiber.New(fiber.Config{
@@ -153,6 +154,9 @@ func main() {
 
 	// Setup timetable routes
 	timetable.SetupTimetableRoutes(app)
+
+	// Setup exams routes
+	exams.SetupExamRoutes(app, config.GetDB())
 
 	// Setup parents API routes
 	api := app.Group("/api/parents")

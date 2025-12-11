@@ -27,12 +27,14 @@ type Break struct {
 
 // TimetableEntry represents a single lesson in the timetable
 type TimetableEntry struct {
-	ID        string    `json:"id" db:"id"`
-	ClassID   string    `json:"class_id" db:"class_id"`
-	SubjectID string    `json:"subject_id" db:"subject_id"`
-	TeacherID string    `json:"teacher_id" db:"teacher_id"`
-	Day       string    `json:"day" db:"day"`
-	TimeSlot  string    `json:"time_slot" db:"time_slot"`
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+	ID          string    `json:"id" db:"id"`
+	ClassID     string    `json:"class_id" db:"class_id"`
+	SubjectID   string    `json:"subject_id" db:"subject_id"`
+	TeacherID   string    `json:"teacher_id" db:"teacher_id"`
+	Day         string    `json:"day" db:"day"`
+	TimeSlot    string    `json:"time_slot" db:"time_slot"`
+	SubjectName string    `json:"subject_name,omitempty"`
+	ClassName   string    `json:"class_name,omitempty"`
+	CreatedAt   time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
 }

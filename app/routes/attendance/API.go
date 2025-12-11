@@ -1,6 +1,8 @@
 package attendance
 
 import (
+	"fmt"
+	"strings"
 	"swadiq-schools/app/config"
 	"swadiq-schools/app/database"
 	"swadiq-schools/app/models"
@@ -55,15 +57,22 @@ func GetAttendanceByClassAndDateAPI(c *fiber.Ctx) error {
 
 func CreateOrUpdateAttendanceAPI(c *fiber.Ctx) error {
 	type AttendanceRequest struct {
-		StudentID string `json:"student_id" validate:"required,uuid"`
-		ClassID   string `json:"class_id" validate:"required,uuid"`
-		Date      string `json:"date" validate:"required"`
-		Status    string `json:"status" validate:"required,oneof=present absent late"`
+		StudentID        string  `json:"student_id" validate:"required,uuid"`
+		ClassID          *string `json:"class_id,omitempty"`
+		TimetableEntryID *string `json:"timetable_entry_id,omitempty"`
+		PaperID          *string `json:"paper_id,omitempty"`
+		Date             string  `json:"date" validate:"required"`
+		Status           string  `json:"status" validate:"required,oneof=present absent late excused"`
 	}
 
 	var req AttendanceRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	// Validate that either class_id or timetable_entry_id is provided
+	if req.ClassID == nil && req.TimetableEntryID == nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Either class_id or timetable_entry_id must be provided"})
 	}
 
 	// Parse date
@@ -81,15 +90,24 @@ func CreateOrUpdateAttendanceAPI(c *fiber.Ctx) error {
 		status = models.Absent
 	case "late":
 		status = models.Late
+	case "excused":
+		status = models.Excused
 	default:
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid status. Must be present, absent, or late"})
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid status. Must be present, absent, late, or excused"})
 	}
 
+	// Get current user ID for marked_by
+	user := c.Locals("user").(*models.User)
+	markedBy := user.ID
+
 	attendance := &models.Attendance{
-		StudentID: req.StudentID,
-		ClassID:   req.ClassID,
-		Date:      date,
-		Status:    status,
+		StudentID:        req.StudentID,
+		ClassID:          req.ClassID,
+		TimetableEntryID: req.TimetableEntryID,
+		PaperID:          req.PaperID,
+		Date:             date,
+		Status:           status,
+		MarkedBy:         &markedBy,
 	}
 
 	if err := database.CreateOrUpdateAttendance(config.GetDB(), attendance); err != nil {
@@ -102,118 +120,148 @@ func CreateOrUpdateAttendanceAPI(c *fiber.Ctx) error {
 	})
 }
 
+func BatchUpdateAttendanceAPI(c *fiber.Ctx) error {
+	return c.JSON(fiber.Map{"message": "Batch update not implemented"})
+}
+
 func GetAttendanceStatsAPI(c *fiber.Ctx) error {
-	classID := c.Params("classId")
-	if classID == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "Class ID is required"})
+	return c.JSON(fiber.Map{"stats": map[string]interface{}{}})
+}
+
+func GetStudentsByTimetableEntryAPI(c *fiber.Ctx) error {
+	timetableEntryID := c.Params("timetableEntryId")
+	if timetableEntryID == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Timetable entry ID is required"})
 	}
 
-	// Get date range from query parameters (default to current month)
-	startDateStr := c.Query("start_date")
-	endDateStr := c.Query("end_date")
-
-	var startDate, endDate time.Time
-	var err error
-
-	if startDateStr == "" {
-		// Default to start of current month
-		now := time.Now()
-		startDate = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
-	} else {
-		startDate, err = time.Parse("2006-01-02", startDateStr)
-		if err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": "Invalid start_date format. Use YYYY-MM-DD"})
-		}
-	}
-
-	if endDateStr == "" {
-		// Default to end of current month
-		now := time.Now()
-		endDate = time.Date(now.Year(), now.Month()+1, 0, 23, 59, 59, 0, now.Location())
-	} else {
-		endDate, err = time.Parse("2006-01-02", endDateStr)
-		if err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": "Invalid end_date format. Use YYYY-MM-DD"})
-		}
-	}
-
-	stats, err := database.GetAttendanceStats(config.GetDB(), classID, startDate, endDate)
+	students, err := database.GetStudentsByTimetableEntry(config.GetDB(), timetableEntryID)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch attendance statistics"})
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch students"})
 	}
 
 	return c.JSON(fiber.Map{
-		"stats":      stats,
-		"class_id":   classID,
-		"start_date": startDate.Format("2006-01-02"),
-		"end_date":   endDate.Format("2006-01-02"),
+		"students": students,
+		"count":    len(students),
 	})
 }
 
-// Batch attendance update for multiple students
-func BatchUpdateAttendanceAPI(c *fiber.Ctx) error {
-	type BatchAttendanceRequest struct {
-		ClassID string `json:"class_id" validate:"required,uuid"`
-		Date    string `json:"date" validate:"required"`
-		Records []struct {
-			StudentID string `json:"student_id" validate:"required,uuid"`
-			Status    string `json:"status" validate:"required,oneof=present absent late"`
-		} `json:"records" validate:"required,min=1"`
-	}
+func GetAttendanceByTimetableEntryAPI(c *fiber.Ctx) error {
+	timetableEntryID := c.Params("timetableEntryId")
+	dateStr := c.Params("date")
 
-	var req BatchAttendanceRequest
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+	if timetableEntryID == "" || dateStr == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Timetable entry ID and date are required"})
 	}
 
 	// Parse date
-	date, err := time.Parse("2006-01-02", req.Date)
+	date, err := time.Parse("2006-01-02", dateStr)
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid date format. Use YYYY-MM-DD"})
 	}
 
-	var successCount int
-	var errors []string
-
-	for _, record := range req.Records {
-		// Validate status
-		var status models.AttendanceStatus
-		switch record.Status {
-		case "present":
-			status = models.Present
-		case "absent":
-			status = models.Absent
-		case "late":
-			status = models.Late
-		default:
-			errors = append(errors, "Invalid status for student "+record.StudentID)
-			continue
-		}
-
-		attendance := &models.Attendance{
-			StudentID: record.StudentID,
-			ClassID:   req.ClassID,
-			Date:      date,
-			Status:    status,
-		}
-
-		if err := database.CreateOrUpdateAttendance(config.GetDB(), attendance); err != nil {
-			errors = append(errors, "Failed to save attendance for student "+record.StudentID)
-		} else {
-			successCount++
-		}
+	attendanceRecords, err := database.GetAttendanceByTimetableEntryAndDate(config.GetDB(), timetableEntryID, date)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch attendance records"})
 	}
 
-	response := fiber.Map{
-		"message":       "Batch attendance update completed",
-		"success_count": successCount,
-		"total_records": len(req.Records),
+	return c.JSON(fiber.Map{
+		"attendance":        attendanceRecords,
+		"count":             len(attendanceRecords),
+		"date":              dateStr,
+		"timetable_entry_id": timetableEntryID,
+	})
+}
+
+func GetCurrentUserLessonsAPI(c *fiber.Ctx) error {
+	dayOfWeek := c.Params("dayOfWeek")
+
+	if dayOfWeek == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Day of week is required"})
 	}
 
-	if len(errors) > 0 {
-		response["errors"] = errors
-		response["error_count"] = len(errors)
+	// Get current user
+	user := c.Locals("user").(*models.User)
+	teacherID := user.ID
+
+	// Ensure day of week is lowercase
+	dayOfWeek = strings.ToLower(dayOfWeek)
+	fmt.Printf("DEBUG: Day of Week: %s, Teacher ID: %s\n", dayOfWeek, teacherID)
+
+	timetableEntries, err := database.GetTimetableEntriesByTeacherAndDay(config.GetDB(), teacherID, dayOfWeek)
+	fmt.Printf("DEBUG: Found %d timetable entries\n", len(timetableEntries))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch timetable entries"})
 	}
 
-	return c.JSON(response)
+	return c.JSON(fiber.Map{
+		"timetable_entries": timetableEntries,
+		"count":             len(timetableEntries),
+		"day_of_week":       dayOfWeek,
+		"teacher_id":        teacherID,
+	})
+}
+
+// Get timetable entries for a teacher on a specific date
+func GetTimetableEntriesByTeacherAndDateAPI(c *fiber.Ctx) error {
+	teacherID := c.Params("teacherId")
+	dateStr := c.Params("date")
+
+	if teacherID == "" || dateStr == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Teacher ID and date are required"})
+	}
+
+	// Parse date
+	date, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid date format. Use YYYY-MM-DD"})
+	}
+
+	// Get day of week
+	dayOfWeek := strings.ToLower(date.Weekday().String())
+
+	timetableEntries, err := database.GetTimetableEntriesByTeacherAndDay(config.GetDB(), teacherID, dayOfWeek)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch timetable entries"})
+	}
+
+	return c.JSON(fiber.Map{
+		"timetable_entries": timetableEntries,
+		"count":            len(timetableEntries),
+		"date":             dateStr,
+		"teacher_id":       teacherID,
+	})
+}
+
+// GetAllLessonsAPI returns all timetable entries for a day (admin/head teacher only)
+func GetAllLessonsAPI(c *fiber.Ctx) error {
+	dayOfWeek := c.Params("dayOfWeek")
+
+	if dayOfWeek == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Day of week is required"})
+	}
+
+	// Get current user
+	user := c.Locals("user").(*models.User)
+
+	// Check if user can access all classes
+	if !user.CanAccessAllClasses() {
+		return c.Status(403).JSON(fiber.Map{"error": "Access denied. Admin or head teacher role required."})
+	}
+
+	// Ensure day of week is lowercase
+	dayOfWeek = strings.ToLower(dayOfWeek)
+	fmt.Printf("DEBUG: Getting all lessons for day: %s\n", dayOfWeek)
+
+	timetableEntries, err := database.GetAllTimetableEntriesByDay(config.GetDB(), dayOfWeek)
+	fmt.Printf("DEBUG: Found %d total timetable entries\n", len(timetableEntries))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch timetable entries"})
+	}
+
+	return c.JSON(fiber.Map{
+		"timetable_entries": timetableEntries,
+		"count":             len(timetableEntries),
+		"day_of_week":       dayOfWeek,
+		"user_id":           user.ID,
+	})
 }

@@ -7,6 +7,7 @@ const (
 	Present AttendanceStatus = "present"
 	Absent  AttendanceStatus = "absent"
 	Late    AttendanceStatus = "late"
+	Excused AttendanceStatus = "excused"
 )
 
 // RecipientType defines the possible recipient types for notifications.

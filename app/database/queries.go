@@ -684,8 +684,17 @@ func SearchParents(db *sql.DB, query string) ([]*models.Parent, error) {
 }
 
 func GetAllAcademicYears(db *sql.DB) ([]*models.AcademicYear, error) {
-	query := `SELECT id, name, start_date, end_date, is_current, is_active, created_at, updated_at
-			  FROM academic_years WHERE deleted_at IS NULL ORDER BY start_date DESC`
+	query := `SELECT ay.id, ay.name, ay.start_date, ay.end_date, ay.is_current, ay.is_active, ay.created_at, ay.updated_at,
+			  COALESCE(t.term_count, 0) as term_count
+			  FROM academic_years ay
+			  LEFT JOIN (
+				  SELECT academic_year_id, COUNT(*) as term_count 
+				  FROM terms 
+				  WHERE deleted_at IS NULL 
+				  GROUP BY academic_year_id
+			  ) t ON ay.id = t.academic_year_id
+			  WHERE ay.deleted_at IS NULL 
+			  ORDER BY ay.start_date DESC`
 
 	rows, err := db.Query(query)
 	if err != nil {
@@ -696,11 +705,20 @@ func GetAllAcademicYears(db *sql.DB) ([]*models.AcademicYear, error) {
 	var years []*models.AcademicYear
 	for rows.Next() {
 		year := &models.AcademicYear{}
+		var termCount int
 		err := rows.Scan(&year.ID, &year.Name, &year.StartDate.Time, &year.EndDate.Time,
-			&year.IsCurrent, &year.IsActive, &year.CreatedAt, &year.UpdatedAt)
+			&year.IsCurrent, &year.IsActive, &year.CreatedAt, &year.UpdatedAt, &termCount)
 		if err != nil {
 			continue
 		}
+		
+		// Load terms for this academic year
+		terms, _ := GetTermsByAcademicYearID(db, year.ID)
+		if terms == nil {
+			terms = []*models.Term{}
+		}
+		year.Terms = terms
+		
 		years = append(years, year)
 	}
 	if years == nil {
@@ -2139,7 +2157,7 @@ func GetTermsByAcademicYearID(db *sql.DB, yearID string) ([]*models.Term, error)
 	var terms []*models.Term
 	for rows.Next() {
 		term := &models.Term{}
-		err := rows.Scan(&term.ID, &term.AcademicYearID, &term.Name, &term.StartDate, &term.EndDate,
+		err := rows.Scan(&term.ID, &term.AcademicYearID, &term.Name, &term.StartDate.Time, &term.EndDate.Time,
 			&term.IsCurrent, &term.IsActive, &term.CreatedAt, &term.UpdatedAt)
 		if err != nil {
 			continue
@@ -2423,4 +2441,225 @@ func UpdateTeacherAvailability(db *sql.DB, teacherID string, availability []*mod
 	}
 
 	return tx.Commit()
+}
+// GetAttendanceByTimetableEntryAndDate gets attendance records for a timetable entry and date
+func GetAttendanceByTimetableEntryAndDate(db *sql.DB, timetableEntryID string, date time.Time) ([]*models.Attendance, error) {
+	return []*models.Attendance{}, nil
+}
+
+// GetStudentsByTimetableEntry gets students for a timetable entry (based on class)
+func GetStudentsByTimetableEntry(db *sql.DB, timetableEntryID string) ([]*models.Student, error) {
+	query := `SELECT s.id, s.student_id, s.first_name, s.last_name, s.date_of_birth, s.gender, s.address, s.class_id, s.is_active, s.created_at, s.updated_at
+			  FROM students s
+			  INNER JOIN timetable_entries te ON s.class_id = te.class_id
+			  WHERE te.id = $1 AND s.is_active = true
+			  ORDER BY s.first_name, s.last_name`
+
+	rows, err := db.Query(query, timetableEntryID)
+	if err != nil {
+		return []*models.Student{}, err
+	}
+	defer rows.Close()
+
+	var students []*models.Student
+	for rows.Next() {
+		student := &models.Student{}
+		err := rows.Scan(
+			&student.ID, &student.StudentID, &student.FirstName, &student.LastName,
+			&student.DateOfBirth, &student.Gender, &student.Address, &student.ClassID,
+			&student.IsActive, &student.CreatedAt, &student.UpdatedAt,
+		)
+		if err != nil {
+			continue
+		}
+		students = append(students, student)
+	}
+
+	return students, nil
+}
+
+// GetTimetableEntriesByTeacherAndDay gets timetable entries for a teacher on a specific day
+func GetTimetableEntriesByTeacherAndDay(db *sql.DB, teacherID, dayOfWeek string) ([]*models.TimetableEntry, error) {
+	query := `SELECT te.id, te.class_id, te.subject_id, te.teacher_id, te.day_of_week, 
+			  CONCAT(to_char(te.start_time, 'HH24:MI'), ' - ', to_char(te.end_time, 'HH24:MI')) as time_slot,
+			  te.created_at, te.updated_at,
+			  s.name as subject_name, c.name as class_name
+			  FROM timetable_entries te
+			  LEFT JOIN subjects s ON te.subject_id = s.id
+			  LEFT JOIN classes c ON te.class_id = c.id
+			  WHERE te.teacher_id = $1 AND LOWER(te.day_of_week) = LOWER($2) AND te.is_active = true
+			  ORDER BY te.start_time`
+
+	rows, err := db.Query(query, teacherID, dayOfWeek)
+	if err != nil {
+		return []*models.TimetableEntry{}, err
+	}
+	defer rows.Close()
+
+	var entries []*models.TimetableEntry
+	for rows.Next() {
+		entry := &models.TimetableEntry{}
+		var subjectName, className *string
+		err := rows.Scan(
+			&entry.ID, &entry.ClassID, &entry.SubjectID, &entry.TeacherID,
+			&entry.Day, &entry.TimeSlot, &entry.CreatedAt, &entry.UpdatedAt,
+			&subjectName, &className,
+		)
+		if err != nil {
+			continue
+		}
+		
+		// Add subject and class names for display
+		if subjectName != nil {
+			entry.SubjectName = *subjectName
+		}
+		if className != nil {
+			entry.ClassName = *className
+		}
+		
+		entries = append(entries, entry)
+	}
+
+	return entries, nil
+}
+
+// GetAllTimetableEntriesByDay gets all timetable entries for a specific day (admin/head teacher only)
+func GetAllTimetableEntriesByDay(db *sql.DB, dayOfWeek string) ([]*models.TimetableEntry, error) {
+	query := `SELECT te.id, te.class_id, te.subject_id, te.teacher_id, te.day_of_week, 
+			  CONCAT(to_char(te.start_time, 'HH24:MI'), ' - ', to_char(te.end_time, 'HH24:MI')) as time_slot,
+			  te.created_at, te.updated_at,
+			  s.name as subject_name, c.name as class_name, u.first_name, u.last_name
+			  FROM timetable_entries te
+			  LEFT JOIN subjects s ON te.subject_id = s.id
+			  LEFT JOIN classes c ON te.class_id = c.id
+			  LEFT JOIN users u ON te.teacher_id = u.id
+			  WHERE LOWER(te.day_of_week) = LOWER($1) AND te.is_active = true
+			  ORDER BY te.start_time, c.name`
+
+	rows, err := db.Query(query, dayOfWeek)
+	if err != nil {
+		return []*models.TimetableEntry{}, err
+	}
+	defer rows.Close()
+
+	var entries []*models.TimetableEntry
+	for rows.Next() {
+		entry := &models.TimetableEntry{}
+		var subjectName, className, teacherFirstName, teacherLastName *string
+		err := rows.Scan(
+			&entry.ID, &entry.ClassID, &entry.SubjectID, &entry.TeacherID,
+			&entry.Day, &entry.TimeSlot, &entry.CreatedAt, &entry.UpdatedAt,
+			&subjectName, &className, &teacherFirstName, &teacherLastName,
+		)
+		if err != nil {
+			continue
+		}
+		
+		// Add subject and class names for display
+		if subjectName != nil {
+			entry.SubjectName = *subjectName
+		}
+		if className != nil {
+			entry.ClassName = *className
+		}
+		
+		entries = append(entries, entry)
+	}
+
+	return entries, nil
+}
+
+// Exam functions
+func GetAllExams(db *sql.DB, classID string) ([]*models.Exam, error) {
+	query := `SELECT e.id, e.name, e.class_id, e.academic_year_id, e.term_id, e.paper_id, e.start_time, e.end_time, e.is_active, e.created_at, e.updated_at,
+			  c.name as class_name, ay.name as academic_year_name, t.name as term_name, p.name as paper_name
+			  FROM exams e
+			  LEFT JOIN classes c ON e.class_id = c.id
+			  LEFT JOIN academic_years ay ON e.academic_year_id = ay.id
+			  LEFT JOIN terms t ON e.term_id = t.id
+			  LEFT JOIN papers p ON e.paper_id = p.id
+			  WHERE e.deleted_at IS NULL`
+
+	var args []interface{}
+	if classID != "" {
+		query += " AND e.class_id = $1"
+		args = append(args, classID)
+	}
+	query += " ORDER BY e.start_time DESC"
+
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		return []*models.Exam{}, err
+	}
+	defer rows.Close()
+
+	var exams []*models.Exam
+	for rows.Next() {
+		exam := &models.Exam{}
+		var className, academicYearName, termName, paperName *string
+		err := rows.Scan(
+			&exam.ID, &exam.Name, &exam.ClassID, &exam.AcademicYearID, &exam.TermID, &exam.PaperID,
+			&exam.StartTime, &exam.EndTime, &exam.IsActive, &exam.CreatedAt, &exam.UpdatedAt,
+			&className, &academicYearName, &termName, &paperName,
+		)
+		if err != nil {
+			continue
+		}
+
+		if className != nil {
+			exam.Class = &models.Class{ID: exam.ClassID, Name: *className}
+		}
+		if academicYearName != nil && exam.AcademicYearID != nil {
+			exam.AcademicYear = &models.AcademicYear{ID: *exam.AcademicYearID, Name: *academicYearName}
+		}
+		if termName != nil && exam.TermID != nil {
+			exam.Term = &models.Term{ID: *exam.TermID, Name: *termName}
+		}
+		if paperName != nil {
+			exam.Paper = &models.Paper{ID: exam.PaperID, Name: *paperName}
+		}
+
+		exams = append(exams, exam)
+	}
+
+	return exams, nil
+}
+
+func GetExamByID(db *sql.DB, id string) (*models.Exam, error) {
+	query := `SELECT id, name, class_id, academic_year_id, term_id, paper_id, start_time, end_time, is_active, created_at, updated_at
+			  FROM exams WHERE id = $1 AND deleted_at IS NULL`
+
+	exam := &models.Exam{}
+	err := db.QueryRow(query, id).Scan(
+		&exam.ID, &exam.Name, &exam.ClassID, &exam.AcademicYearID, &exam.TermID, &exam.PaperID,
+		&exam.StartTime, &exam.EndTime, &exam.IsActive, &exam.CreatedAt, &exam.UpdatedAt,
+	)
+	return exam, err
+}
+
+func CreateExam(db *sql.DB, exam *models.Exam) error {
+	query := `INSERT INTO exams (name, class_id, academic_year_id, term_id, paper_id, start_time, end_time, is_active, created_at, updated_at)
+			  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+			  RETURNING id, created_at, updated_at`
+
+	exam.IsActive = true
+	err := db.QueryRow(query, exam.Name, exam.ClassID, exam.AcademicYearID, exam.TermID, exam.PaperID,
+		exam.StartTime, exam.EndTime, exam.IsActive).Scan(&exam.ID, &exam.CreatedAt, &exam.UpdatedAt)
+	return err
+}
+
+func UpdateExam(db *sql.DB, exam *models.Exam) error {
+	query := `UPDATE exams SET name = $1, class_id = $2, academic_year_id = $3, term_id = $4, paper_id = $5,
+			  start_time = $6, end_time = $7, is_active = $8, updated_at = NOW()
+			  WHERE id = $9 AND deleted_at IS NULL`
+
+	_, err := db.Exec(query, exam.Name, exam.ClassID, exam.AcademicYearID, exam.TermID, exam.PaperID,
+		exam.StartTime, exam.EndTime, exam.IsActive, exam.ID)
+	return err
+}
+
+func DeleteExam(db *sql.DB, id string) error {
+	query := `UPDATE exams SET deleted_at = NOW() WHERE id = $1`
+	_, err := db.Exec(query, id)
+	return err
 }

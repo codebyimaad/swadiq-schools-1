@@ -651,6 +651,9 @@ function handleScopeChange() {
         classSelector.classList.remove('hidden');
         studentSelector.classList.remove('hidden');
         updateStudentSelectorState();
+    } else if (scope === 'all_classes') {
+        // Automatically select all classes
+        selectAllClasses();
     }
 }
 
@@ -670,6 +673,9 @@ function handleEditScopeChange() {
     } else if (scope === 'class_and_student') {
         classSelector.classList.remove('hidden');
         studentSelector.classList.remove('hidden');
+    } else if (scope === 'all_classes') {
+        // Automatically select all classes for edit mode
+        selectAllClassesEdit();
     }
 }
 
@@ -1069,7 +1075,7 @@ async function deleteFeeType(feeTypeId, feeTypeName) {
             showSuccessMessage('Success', 'Fee type deleted successfully!');
         } else {
             const error = await response.json();
-            showErrorMessage('Error', error.message || 'Failed to delete fee type');
+            showErrorMessage('Error', error.message || error.error || 'Failed to delete fee type');
         }
     } catch (error) {
         showErrorMessage('Error', 'Error deleting fee type');
@@ -1299,6 +1305,62 @@ function closeMessageModal() {
 function closeViewAssignmentsModal() {
     document.getElementById('viewAssignmentsModal').classList.add('hidden');
     document.body.style.overflow = 'auto';
+}
+
+// Function to automatically select all classes
+async function selectAllClasses() {
+    try {
+        const response = await fetch('/api/classes');
+        const data = await response.json();
+        const classes = data.classes || [];
+        
+        // Select all classes
+        selectedClasses.clear();
+        const classIds = [];
+        const classNames = [];
+        
+        classes.forEach(cls => {
+            selectedClasses.add(cls.id);
+            classIds.push(cls.id);
+            classNames.push(cls.name);
+        });
+        
+        // Update hidden input and display
+        document.getElementById('feeTypeClasses').value = classIds.join(',');
+        document.getElementById('selectedClassNames').innerHTML = classNames.length > 0 
+            ? `<span class="text-green-600 font-medium">All classes selected (${classNames.length})</span>`
+            : 'No classes available';
+            
+    } catch (error) {
+        console.error('Error loading classes for auto-selection:', error);
+    }
+}
+
+// Function to automatically select all classes in edit mode
+async function selectAllClassesEdit() {
+    try {
+        const response = await fetch('/api/classes');
+        const data = await response.json();
+        const classes = data.classes || [];
+        
+        // Select all classes
+        const classIds = [];
+        const classNames = [];
+        
+        classes.forEach(cls => {
+            classIds.push(cls.id);
+            classNames.push(cls.name);
+        });
+        
+        // Update hidden input and display for edit mode
+        document.getElementById('editFeeTypeClasses').value = classIds.join(',');
+        document.getElementById('editSelectedClassNames').innerHTML = classNames.length > 0 
+            ? `<span class="text-green-600 font-medium">All classes selected (${classNames.length})</span>`
+            : 'No classes available';
+            
+    } catch (error) {
+        console.error('Error loading classes for auto-selection in edit mode:', error);
+    }
 }
 
 // Activate fee type function

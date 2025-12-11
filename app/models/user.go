@@ -19,6 +19,16 @@ type User struct {
 	Subjects    []*Subject    `json:"subjects,omitempty" gorm:"many2many:teacher_subjects;"`
 }
 
+// CanAccessAllClasses checks if user has admin or head teacher privileges
+func (u *User) CanAccessAllClasses() bool {
+	for _, role := range u.Roles {
+		if role.Name == "admin" || role.Name == "head_teacher" {
+			return true
+		}
+	}
+	return false
+}
+
 type Session struct {
 	ID        string    `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()" validate:"required,uuid"`
 	UserID    string    `json:"user_id" gorm:"not null;index;type:uuid" validate:"required,uuid"`

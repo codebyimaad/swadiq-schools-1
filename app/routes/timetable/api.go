@@ -399,7 +399,7 @@ func GetTimetableDataAPI(c *fiber.Ctx) error {
 	err = db.QueryRow(settingsQuery, classID).Scan(&settings.Days, &settings.StartTime, &settings.EndTime, &settings.LessonDuration, &settings.Breaks)
 	if err != nil {
 		// Use default settings
-		settings.Days = `["monday","tuesday","wednesday","thursday","friday"]`
+		settings.Days = `["monday","tuesday","wednesday","thursday","friday","saturday"]`
 		settings.StartTime = "08:00"
 		settings.EndTime = "16:00"
 		settings.LessonDuration = 60
@@ -526,7 +526,7 @@ func GetTimetableSettingsAPI(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
 			"success": true,
 			"settings": fiber.Map{
-				"days":            json.RawMessage(`["monday","tuesday","wednesday","thursday","friday"]`),
+				"days":            json.RawMessage(`["monday","tuesday","wednesday","thursday","friday","saturday"]`),
 				"start_time":      "08:00:00",
 				"end_time":        "16:00:00",
 				"lesson_duration": 60,
@@ -623,7 +623,7 @@ func GetDefaultTimetableSettingsAPI(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
 			"success": true,
 			"settings": fiber.Map{
-				"days":            json.RawMessage(`["monday","tuesday","wednesday","thursday","friday"]`),
+				"days":            json.RawMessage(`["monday","tuesday","wednesday","thursday","friday","saturday"]`),
 				"start_time":      "08:00",
 				"end_time":        "16:00",
 				"lesson_duration": 60,

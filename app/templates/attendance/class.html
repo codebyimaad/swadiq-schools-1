@@ -19,6 +19,14 @@
             </div>
         </div>
         <div class="flex items-center space-x-3">
+            <button onclick="openClassSelector()" class="bg-primary-600 text-white px-3 py-1 rounded text-sm hover:bg-primary-700 flex items-center mr-2">
+                <i class="fas fa-exchange-alt mr-2"></i>
+                Switch Class
+            </button>
+            <button onclick="openLessonSelector()" class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 flex items-center">
+                <i class="fas fa-clock mr-2"></i>
+                Select Lesson
+            </button>
             <div class="text-sm text-gray-500">
                 Students: <span class="font-medium text-gray-900">{{len .students}}</span>
             </div>
@@ -146,6 +154,53 @@
     </div>
 </div>
 
+<!-- Class Selection Modal -->
+<div id="classSelectorModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-900">Select Class</h3>
+            <button onclick="closeClassSelector()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="p-6 max-h-96 overflow-y-auto">
+            <div id="classesListModal" class="space-y-2">
+                <div class="text-center py-4 text-gray-500">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p class="mt-2">Loading classes...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lesson Selection Modal -->
+<div id="lessonSelectorModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center">
+    <div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
+        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900">Select Lesson</h3>
+                <p class="text-sm text-gray-600" id="lessonModalDate">Choose a lesson for attendance</p>
+            </div>
+            <button onclick="closeLessonSelector()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="p-6">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Select Date</label>
+                <input type="date" id="lessonDate" class="w-full px-3 py-2 border border-gray-300 rounded-md" onchange="loadLessonsForDate()">
+            </div>
+            <div id="lessonsListModal" class="space-y-2 max-h-64 overflow-y-auto">
+                <div class="text-center py-4 text-gray-500">
+                    <i class="fas fa-calendar-alt text-2xl mb-2"></i>
+                    <p>Select a date to view lessons</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 const classId = '{{.class.ID}}';
 
@@ -229,4 +284,201 @@ function exportReport() {
     // This could generate and download a report
     alert('Export report - Feature coming soon!');
 }
+
+async function openClassSelector() {
+    document.getElementById('classSelectorModal').classList.remove('hidden');
+    
+    try {
+        const response = await fetch('/api/classes/');
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayClassesInModal(data.classes || []);
+        } else {
+            displayModalError('Failed to load classes');
+        }
+    } catch (error) {
+        console.error('Error loading classes:', error);
+        displayModalError('Network error occurred');
+    }
+}
+
+function displayClassesInModal(classes) {
+    const container = document.getElementById('classesListModal');
+    
+    if (classes.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-4 text-gray-500">
+                <i class="fas fa-school text-2xl mb-2"></i>
+                <p>No classes available</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = classes.map(cls => `
+        <div class="border border-gray-200 rounded-lg p-3 hover:border-primary-300 hover:bg-gray-50 cursor-pointer transition-all" 
+             onclick="selectClass('${cls.id}')">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h4 class="font-medium text-gray-900">${cls.name}</h4>
+                    <p class="text-sm text-gray-600">${cls.teacher ? cls.teacher.first_name + ' ' + cls.teacher.last_name : 'No teacher assigned'}</p>
+                </div>
+                <div class="text-sm text-gray-500">
+                    ${cls.student_count || 0} students
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function displayModalError(message) {
+    document.getElementById('classesListModal').innerHTML = `
+        <div class="text-center py-4 text-red-500">
+            <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+            <p>${message}</p>
+        </div>
+    `;
+}
+
+function selectClass(classId) {
+    closeClassSelector();
+    window.location.href = `/attendance/class/${classId}`;
+}
+
+function closeClassSelector() {
+    document.getElementById('classSelectorModal').classList.add('hidden');
+}
+
+// Close modal on escape key or outside click
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeClassSelector();
+    }
+});
+
+document.getElementById('classSelectorModal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeClassSelector();
+    }
+});
+
+function openLessonSelector() {
+    document.getElementById('lessonSelectorModal').classList.remove('hidden');
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('lessonDate').value = today;
+    loadLessonsForDate();
+}
+
+async function loadLessonsForDate() {
+    const date = document.getElementById('lessonDate').value;
+    if (!date) return;
+    
+    document.getElementById('lessonModalDate').textContent = `Lessons for ${date}`;
+    document.getElementById('lessonsListModal').innerHTML = `
+        <div class="text-center py-4 text-gray-500">
+            <i class="fas fa-spinner fa-spin text-xl mb-2"></i>
+            <p>Loading lessons...</p>
+        </div>
+    `;
+    
+    try {
+        // Convert date to day of week
+        const dateObj = new Date(date);
+        const dayOfWeek = dateObj.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+        
+        const response = await fetch(`/api/attendance/teacher-lessons/${dayOfWeek}`);
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayLessonsInModal(data.timetable_entries || [], date);
+        } else {
+            displayLessonModalError(data.error || 'Failed to load lessons');
+        }
+    } catch (error) {
+        console.error('Error loading lessons:', error);
+        displayLessonModalError('Network error occurred');
+    }
+}
+
+function displayLessonsInModal(lessons, date) {
+    const container = document.getElementById('lessonsListModal');
+    
+    if (lessons.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-4 text-gray-500">
+                <i class="fas fa-calendar-times text-2xl mb-2"></i>
+                <p>No lessons scheduled for ${date}</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Filter lessons for current class
+    const currentClassLessons = lessons.filter(lesson => lesson.class_id === classId);
+    
+    if (currentClassLessons.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-4 text-gray-500">
+                <i class="fas fa-info-circle text-2xl mb-2"></i>
+                <p>No lessons scheduled for this class on ${date}</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = currentClassLessons.map(lesson => `
+        <div class="border border-gray-200 rounded-lg p-3 hover:border-primary-300 hover:bg-gray-50 cursor-pointer transition-all" 
+             onclick="selectLesson('${lesson.id}', '${date}')">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h4 class="font-medium text-gray-900">${lesson.time_slot}</h4>
+                    <p class="text-sm text-gray-600">Subject: ${lesson.subject_id}</p>
+                </div>
+                <div class="text-right">
+                    <span class="bg-primary-100 text-primary-800 px-2 py-1 rounded text-xs font-medium">
+                        Take Attendance
+                    </span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function displayLessonModalError(message) {
+    document.getElementById('lessonsListModal').innerHTML = `
+        <div class="text-center py-4 text-red-500">
+            <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+            <p>${message}</p>
+        </div>
+    `;
+}
+
+function selectLesson(timetableEntryId, date) {
+    closeLessonSelector();
+    const params = new URLSearchParams({
+        timetable_entry_id: timetableEntryId,
+        date: date
+    });
+    window.location.href = `/attendance/lesson?${params.toString()}`;
+}
+
+function closeLessonSelector() {
+    document.getElementById('lessonSelectorModal').classList.add('hidden');
+}
+
+// Update escape key handler
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeClassSelector();
+        closeLessonSelector();
+    }
+});
+
+// Add lesson modal click outside handler
+document.getElementById('lessonSelectorModal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeLessonSelector();
+    }
+});
 </script>

@@ -1,0 +1,384 @@
+<!-- Exams Management Page -->
+<div class="p-4 lg:p-6">
+    <div class="mb-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 mb-1">Exams Management 📝</h1>
+                <p class="text-gray-600 text-sm" id="pageDescription">Select a class to manage exams</p>
+            </div>
+            <div id="actionButtons">
+                <button id="backToClassesBtn" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-medium mr-2 hidden">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Classes
+                </button>
+                <button id="addExamBtn" class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center hidden">
+                    <i class="fas fa-plus mr-2"></i>Add Exam
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Classes Table -->
+    <div id="classesView" class="bg-white rounded-xl shadow-sm border border-gray-100">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Students</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200" id="classesTableBody">
+                    <!-- Classes will be loaded here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Exams Table -->
+    <div id="examsView" class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 hidden">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-bold text-gray-900" id="examsTitle">Scheduled Exams</h2>
+            <div class="relative">
+                <input type="text" id="searchExams" placeholder="Search exams..." class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Exam Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paper</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Time</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200" id="examsTableBody">
+                    <!-- Exams will be loaded here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Exam Modal -->
+<div id="examModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-xl shadow-lg w-full max-w-md mx-4">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900" id="examModalTitle">Add Exam</h3>
+        </div>
+        <form id="examForm" class="px-6 py-4">
+            <input type="hidden" id="examId">
+            <div class="mb-4">
+                <label for="examName" class="block text-sm font-medium text-gray-700 mb-1">Exam Name</label>
+                <input type="text" id="examName" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+            </div>
+            <div class="mb-4">
+                <label for="examClass" class="block text-sm font-medium text-gray-700 mb-1">Class</label>
+                <select id="examClass" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                    <option value="">Select Class</option>
+                </select>
+            </div>
+            <div class="mb-4">
+                <label for="examPaper" class="block text-sm font-medium text-gray-700 mb-1">Paper</label>
+                <select id="examPaper" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                    <option value="">Select Paper</option>
+                </select>
+            </div>
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label for="examStartTime" class="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+                    <input type="datetime-local" id="examStartTime" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                </div>
+                <div>
+                    <label for="examEndTime" class="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+                    <input type="datetime-local" id="examEndTime" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                </div>
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button type="button" id="cancelExamBtn" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+                <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-lg hover:bg-primary-700">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+let exams = [];
+let classes = [];
+let papers = [];
+let selectedClass = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadClasses();
+    loadPapers();
+
+    document.getElementById('addExamBtn').addEventListener('click', showAddExamModal);
+    document.getElementById('cancelExamBtn').addEventListener('click', hideExamModal);
+    document.getElementById('examForm').addEventListener('submit', saveExam);
+    document.getElementById('backToClassesBtn').addEventListener('click', showClassesView);
+});
+
+async function loadExams(classId = null) {
+    try {
+        const url = classId ? `/api/exams?class_id=${classId}` : '/api/exams';
+        const response = await fetch(url);
+        const data = await response.json();
+        exams = Array.isArray(data) ? data : (data.data || []);
+        renderExams();
+    } catch (error) {
+        console.error('Error loading exams:', error);
+        exams = [];
+    }
+}
+
+function renderClasses() {
+    const tbody = document.getElementById('classesTableBody');
+    tbody.innerHTML = '';
+
+    if (classes.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-8 text-center text-gray-500">No classes found</td></tr>';
+        return;
+    }
+
+    classes.forEach(cls => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gray-50 cursor-pointer';
+        row.onclick = () => showClassExams(cls);
+        row.innerHTML = `
+            <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm font-medium text-gray-900">${cls.name}</div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm text-gray-600">${cls.code || '-'}</div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
+                    ${cls.student_count || 0} students
+                </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <button class="text-primary-600 hover:text-primary-900 flex items-center">
+                    Manage Exams <i class="fas fa-arrow-right ml-1"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function showClassExams(cls) {
+    selectedClass = cls;
+    document.getElementById('classesView').classList.add('hidden');
+    document.getElementById('examsView').classList.remove('hidden');
+    document.getElementById('addExamBtn').classList.remove('hidden');
+    document.getElementById('backToClassesBtn').classList.remove('hidden');
+    document.getElementById('pageDescription').textContent = `Manage exams for ${cls.name}`;
+    document.getElementById('examsTitle').textContent = `${cls.name} - Scheduled Exams`;
+    loadExams(cls.id);
+}
+
+function showClassesView() {
+    selectedClass = null;
+    document.getElementById('classesView').classList.remove('hidden');
+    document.getElementById('examsView').classList.add('hidden');
+    document.getElementById('addExamBtn').classList.add('hidden');
+    document.getElementById('backToClassesBtn').classList.add('hidden');
+    document.getElementById('pageDescription').textContent = 'Select a class to manage exams';
+}
+
+async function loadClasses() {
+    try {
+        const response = await fetch('/api/classes');
+        const data = await response.json();
+        console.log('Classes API response:', data);
+        classes = Array.isArray(data) ? data : (data.classes || data.data || []);
+        console.log('Processed classes:', classes);
+        renderClasses();
+        populateClassDropdown();
+    } catch (error) {
+        console.error('Error loading classes:', error);
+        classes = [];
+    }
+}
+
+async function loadPapers() {
+    try {
+        const response = await fetch('/api/papers');
+        const data = await response.json();
+        papers = Array.isArray(data) ? data : (data.data || []);
+        populatePaperDropdown();
+    } catch (error) {
+        console.error('Error loading papers:', error);
+        papers = [];
+    }
+}
+
+function renderExams() {
+    const tbody = document.getElementById('examsTableBody');
+    tbody.innerHTML = '';
+
+    if (exams.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-gray-500">No exams found</td></tr>';
+        return;
+    }
+
+    exams.forEach(exam => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gray-50';
+        row.innerHTML = `
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${exam.name}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${exam.paper ? exam.paper.name : 'N/A'}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDateTime(exam.start_time)} - ${formatTime(exam.end_time)}</td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${exam.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                    ${exam.is_active ? 'Active' : 'Inactive'}
+                </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <button onclick="editExam('${exam.id}')" class="text-primary-600 hover:text-primary-900 mr-3">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button onclick="deleteExam('${exam.id}')" class="text-red-600 hover:text-red-900">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function populateClassDropdown() {
+    const select = document.getElementById('examClass');
+    select.innerHTML = '<option value="">Select Class</option>';
+    classes.forEach(cls => {
+        const option = document.createElement('option');
+        option.value = cls.id;
+        option.textContent = cls.name;
+        select.appendChild(option);
+    });
+    
+    // Pre-select current class if viewing class exams
+    if (selectedClass) {
+        select.value = selectedClass.id;
+        select.disabled = true;
+    }
+}
+
+function populatePaperDropdown() {
+    const select = document.getElementById('examPaper');
+    select.innerHTML = '<option value="">Select Paper</option>';
+    papers.forEach(paper => {
+        const option = document.createElement('option');
+        option.value = paper.id;
+        option.textContent = paper.name;
+        select.appendChild(option);
+    });
+}
+
+function showAddExamModal() {
+    document.getElementById('examModalTitle').textContent = 'Add Exam';
+    document.getElementById('examForm').reset();
+    document.getElementById('examId').value = '';
+    if (selectedClass) {
+        document.getElementById('examClass').value = selectedClass.id;
+        document.getElementById('examClass').disabled = true;
+    }
+    document.getElementById('examModal').classList.remove('hidden');
+}
+
+function hideExamModal() {
+    document.getElementById('examModal').classList.add('hidden');
+}
+
+async function saveExam(e) {
+    e.preventDefault();
+    
+    const id = document.getElementById('examId').value;
+    const examData = {
+        name: document.getElementById('examName').value,
+        class_id: document.getElementById('examClass').value,
+        paper_id: document.getElementById('examPaper').value,
+        start_time: document.getElementById('examStartTime').value,
+        end_time: document.getElementById('examEndTime').value
+    };
+
+    try {
+        let response;
+        if (id) {
+            response = await fetch(`/api/exams/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(examData)
+            });
+        } else {
+            response = await fetch('/api/exams', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(examData)
+            });
+        }
+
+        if (response.ok) {
+            hideExamModal();
+            loadExams(selectedClass ? selectedClass.id : null);
+        } else {
+            const error = await response.json();
+            alert('Error: ' + error.error);
+        }
+    } catch (error) {
+        console.error('Error saving exam:', error);
+        alert('Failed to save exam');
+    }
+}
+
+function editExam(id) {
+    const exam = exams.find(e => e.id === id);
+    if (!exam) return;
+
+    document.getElementById('examModalTitle').textContent = 'Edit Exam';
+    document.getElementById('examId').value = exam.id;
+    document.getElementById('examName').value = exam.name;
+    document.getElementById('examClass').value = exam.class_id;
+    document.getElementById('examPaper').value = exam.paper_id;
+    document.getElementById('examStartTime').value = formatDateTimeForInput(exam.start_time);
+    document.getElementById('examEndTime').value = formatDateTimeForInput(exam.end_time);
+    document.getElementById('examModal').classList.remove('hidden');
+}
+
+async function deleteExam(id) {
+    if (!confirm('Are you sure you want to delete this exam?')) return;
+
+    try {
+        const response = await fetch(`/api/exams/${id}`, { method: 'DELETE' });
+        if (response.ok) {
+            loadExams(selectedClass ? selectedClass.id : null);
+        } else {
+            alert('Failed to delete exam');
+        }
+    } catch (error) {
+        console.error('Error deleting exam:', error);
+        alert('Failed to delete exam');
+    }
+}
+
+function formatDateTime(dateString) {
+    return new Date(dateString).toLocaleString();
+}
+
+function formatTime(dateString) {
+    return new Date(dateString).toLocaleTimeString();
+}
+
+function formatDateTimeForInput(dateString) {
+    const date = new Date(dateString);
+    return date.toISOString().slice(0, 16);
+}
+
+window.editExam = editExam;
+window.deleteExam = deleteExam;
+</script>

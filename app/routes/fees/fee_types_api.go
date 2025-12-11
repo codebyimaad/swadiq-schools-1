@@ -39,6 +39,88 @@ type CreateFeeTypeRequest struct {
 	TargetStudentID  string  `json:"target_student_id"`
 }
 
+// autoApplyFees automatically creates fee records for students based on fee type scope
+func autoApplyFees(db *sql.DB, feeTypeID, scope, targetClassID, targetStudentID string, amount float64, feeTitle string) (int, error) {
+	var studentIDs []string
+	
+	// Get current academic year and term
+	var academicYearID, termID sql.NullString
+	db.QueryRow(`SELECT id FROM academic_years WHERE is_current = true LIMIT 1`).Scan(&academicYearID)
+	db.QueryRow(`SELECT id FROM terms WHERE is_current = true LIMIT 1`).Scan(&termID)
+	
+	// Calculate due date (30 days from now)
+	dueDate := time.Now().AddDate(0, 0, 30)
+	
+	// Get student IDs based on scope
+	switch scope {
+	case "all_students":
+		rows, err := db.Query(`SELECT id FROM students WHERE deleted_at IS NULL AND is_active = true`)
+		if err != nil {
+			return 0, err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var studentID string
+			rows.Scan(&studentID)
+			studentIDs = append(studentIDs, studentID)
+		}
+		
+	case "class":
+		if targetClassID != "" {
+			classIDs := strings.Split(targetClassID, ",")
+			for _, classID := range classIDs {
+				if strings.TrimSpace(classID) != "" {
+					rows, err := db.Query(`SELECT student_id FROM class_students WHERE class_id = $1`, strings.TrimSpace(classID))
+					if err != nil {
+						continue
+					}
+					for rows.Next() {
+						var studentID string
+						rows.Scan(&studentID)
+						studentIDs = append(studentIDs, studentID)
+					}
+					rows.Close()
+				}
+			}
+		}
+		
+	case "student":
+		if targetStudentID != "" {
+			studentIDList := strings.Split(targetStudentID, ",")
+			for _, studentID := range studentIDList {
+				if strings.TrimSpace(studentID) != "" {
+					studentIDs = append(studentIDs, strings.TrimSpace(studentID))
+				}
+			}
+		}
+		
+	default:
+		return 0, nil // Manual scope, no auto-application
+	}
+	
+	// Create fee records for all selected students
+	for _, studentID := range studentIDs {
+		// Check if fee already exists for this student and fee type
+		var existingCount int
+		db.QueryRow(`SELECT COUNT(*) FROM fees WHERE student_id = $1 AND fee_type_id = $2 AND deleted_at IS NULL`, 
+			studentID, feeTypeID).Scan(&existingCount)
+		
+		if existingCount == 0 {
+			_, err := db.Exec(`
+				INSERT INTO fees (student_id, fee_type_id, academic_year_id, term_id, title, amount, balance, due_date, created_at, updated_at)
+				VALUES ($1, $2, $3, $4, $5, $6, $6, $7, NOW(), NOW())
+			`, studentID, feeTypeID, academicYearID, termID, feeTitle, amount, dueDate)
+			
+			if err != nil {
+				log.Printf("Failed to create fee for student %s: %v", studentID, err)
+				continue
+			}
+		}
+	}
+	
+	return len(studentIDs), nil
+}
+
 // GetFeeTypesAPI returns all fee types
 func GetFeeTypesAPI(c *fiber.Ctx, db *sql.DB) error {
 	query := `SELECT 
@@ -133,8 +215,8 @@ func CreateFeeTypeAPI(c *fiber.Ctx, db *sql.DB) error {
 		req.PaymentFrequency = "per_term"
 	}
 
-	query := `INSERT INTO fee_types (name, code, description, amount, payment_frequency, scope, created_at, updated_at)
-			  VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW()) 
+	query := `INSERT INTO fee_types (name, code, description, amount, payment_frequency, scope, is_required, created_at, updated_at)
+			  VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW()) 
 			  RETURNING id, created_at, updated_at`
 
 	var feeType FeeTypeResponse
@@ -143,11 +225,14 @@ func CreateFeeTypeAPI(c *fiber.Ctx, db *sql.DB) error {
 		scope = "manual"
 	}
 	
-	// Log the query parameters for debugging
-	log.Printf("Inserting fee type with params: name=%s, code=%s, description=%s, payment_frequency=%s, scope=%s, target_class_id=%s, target_student_id=%s",
-		req.Name, req.Code, req.Description, req.PaymentFrequency, scope, req.TargetClassID, req.TargetStudentID)
+	// Determine if this is a required fee (must pay)
+	isRequired := scope != "manual"
 	
-	err = db.QueryRow(query, req.Name, req.Code, req.Description, amount, req.PaymentFrequency, scope).Scan(
+	// Log the query parameters for debugging
+	log.Printf("Inserting fee type with params: name=%s, code=%s, description=%s, payment_frequency=%s, scope=%s, is_required=%t, target_class_id=%s, target_student_id=%s",
+		req.Name, req.Code, req.Description, req.PaymentFrequency, scope, isRequired, req.TargetClassID, req.TargetStudentID)
+	
+	err = db.QueryRow(query, req.Name, req.Code, req.Description, amount, req.PaymentFrequency, scope, isRequired).Scan(
 		&feeType.ID, &feeType.CreatedAt, &feeType.UpdatedAt,
 	)
 	if err != nil {
@@ -159,6 +244,7 @@ func CreateFeeTypeAPI(c *fiber.Ctx, db *sql.DB) error {
 	feeType.Code = req.Code
 	feeType.Amount = amount
 	feeType.PaymentFrequency = req.PaymentFrequency
+	feeType.IsRequired = isRequired
 	if req.Description != "" {
 		feeType.Description = &req.Description
 	}
@@ -172,6 +258,18 @@ func CreateFeeTypeAPI(c *fiber.Ctx, db *sql.DB) error {
 				db.Exec(`INSERT INTO fee_type_assignments (fee_type_id, class_id) VALUES ($1, $2)`, feeType.ID, strings.TrimSpace(classID))
 			}
 		}
+	} else if scope == "all_classes" {
+		// Get all active classes and create assignments
+		rows, err := db.Query(`SELECT id FROM classes WHERE deleted_at IS NULL`)
+		if err == nil {
+			defer rows.Close()
+			for rows.Next() {
+				var classID string
+				if rows.Scan(&classID) == nil {
+					db.Exec(`INSERT INTO fee_type_assignments (fee_type_id, class_id) VALUES ($1, $2)`, feeType.ID, classID)
+				}
+			}
+		}
 	} else if scope == "student" && req.TargetStudentID != "" {
 		studentIDs := strings.Split(req.TargetStudentID, ",")
 		for _, studentID := range studentIDs {
@@ -179,6 +277,22 @@ func CreateFeeTypeAPI(c *fiber.Ctx, db *sql.DB) error {
 				db.Exec(`INSERT INTO fee_type_assignments (fee_type_id, student_id) VALUES ($1, $2)`, feeType.ID, strings.TrimSpace(studentID))
 			}
 		}
+	}
+
+	// Auto-apply fees if this is a required fee type
+	if isRequired {
+		var studentsAffected int
+		studentsAffected, err = autoApplyFees(db, feeType.ID, scope, req.TargetClassID, req.TargetStudentID, float64(amount), req.Name)
+		if err != nil {
+			log.Printf("Failed to auto-apply fees: %v", err)
+			// Don't fail the creation, just log the error
+		}
+		
+		return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+			"success": true,
+			"data":    feeType,
+			"message": "Fee type created and automatically applied to " + strconv.Itoa(studentsAffected) + " students",
+		})
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
@@ -308,6 +422,18 @@ func UpdateFeeTypeAPI(c *fiber.Ctx, db *sql.DB) error {
 				db.Exec(`INSERT INTO fee_type_assignments (fee_type_id, class_id) VALUES ($1, $2)`, feeTypeID, strings.TrimSpace(classID))
 			}
 		}
+	} else if scope == "all_classes" {
+		// Get all active classes and create assignments
+		rows, err := db.Query(`SELECT id FROM classes WHERE deleted_at IS NULL`)
+		if err == nil {
+			defer rows.Close()
+			for rows.Next() {
+				var classID string
+				if rows.Scan(&classID) == nil {
+					db.Exec(`INSERT INTO fee_type_assignments (fee_type_id, class_id) VALUES ($1, $2)`, feeTypeID, classID)
+				}
+			}
+		}
 	} else if scope == "student" && req.TargetStudentID != "" {
 		studentIDs := strings.Split(req.TargetStudentID, ",")
 		for _, studentID := range studentIDs {
@@ -327,21 +453,49 @@ func UpdateFeeTypeAPI(c *fiber.Ctx, db *sql.DB) error {
 func DeleteFeeTypeAPI(c *fiber.Ctx, db *sql.DB) error {
 	feeTypeID := c.Params("id")
 	
-	// Soft delete fee type
-	query := `UPDATE fee_types SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL`
-	
-	result, err := db.Exec(query, feeTypeID)
+	// Check if there are existing fees using this fee type
+	var feeCount int
+	err := db.QueryRow(`SELECT COUNT(*) FROM fees WHERE fee_type_id = $1 AND deleted_at IS NULL`, feeTypeID).Scan(&feeCount)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"success": false, "error": "Failed to delete fee type"})
+		return c.Status(500).JSON(fiber.Map{"success": false, "message": "Failed to check fee dependencies"})
+	}
+	
+	if feeCount > 0 {
+		return c.Status(400).JSON(fiber.Map{
+			"success": false, 
+			"message": "Cannot delete fee type. There are " + strconv.Itoa(feeCount) + " existing fees using this fee type. Please remove or reassign these fees first.",
+		})
+	}
+	
+	// Start transaction
+	tx, err := db.Begin()
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"success": false, "message": "Failed to start transaction"})
+	}
+	defer tx.Rollback()
+	
+	// Delete assignments first
+	_, err = tx.Exec(`DELETE FROM fee_type_assignments WHERE fee_type_id = $1`, feeTypeID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"success": false, "message": "Failed to delete fee type assignments"})
+	}
+	
+	// Soft delete fee type
+	result, err := tx.Exec(`UPDATE fee_types SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL`, feeTypeID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"success": false, "message": "Failed to delete fee type"})
 	}
 	
 	rowsAffected, err := result.RowsAffected()
 	if err != nil || rowsAffected == 0 {
-		return c.Status(404).JSON(fiber.Map{"success": false, "error": "Fee type not found"})
+		return c.Status(404).JSON(fiber.Map{"success": false, "message": "Fee type not found"})
 	}
 	
-	// Also delete assignments
-	db.Exec(`DELETE FROM fee_type_assignments WHERE fee_type_id = $1`, feeTypeID)
+	// Commit transaction
+	err = tx.Commit()
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"success": false, "message": "Failed to commit deletion"})
+	}
 	
 	return c.JSON(fiber.Map{
 		"success": true,

@@ -65,7 +65,7 @@ type AcademicYear struct {
 	CreatedAt time.Time  `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
 	DeletedAt *time.Time `json:"deleted_at,omitempty" gorm:"index"`
-	Terms     []*Term    `json:"terms,omitempty" gorm:"foreignKey:AcademicYearID;references:ID"`
+	Terms     []*Term    `json:"terms" gorm:"foreignKey:AcademicYearID;references:ID"`
 }
 
 
